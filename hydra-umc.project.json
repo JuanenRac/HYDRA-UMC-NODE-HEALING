@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "ecosystem": "HYDRA-UMC",
+  "name": "HYDRA-UMC-NODE-HEALING",
+  "version": "0.0.3",
+  "role": "service",
+  "stack": "go",
+  "technologies": [
+    "Go",
+    "gRPC health checks"
+  ],
+  "deployment_target": "cm5",
+  "maturity": "functional",
+  "family": "Orchestration & Swarm",
+  "parent": "HYDRA-UMC-ORCHESTRATOR",
+  "build": "go build ./...",
+  "notes": "Real gRPC-based health watchdog with real failover logic, tested.",
+  "native_version": {
+    "file": "version.go",
+    "pattern": "Version\\s*=\\s*\"(\\d+)\\.(\\d+)\\.(\\d+)\""
+  }
+}
