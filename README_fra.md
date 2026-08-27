@@ -27,6 +27,7 @@ Si un nœud échoue en raison d'un dysfonctionnement matériel ou d'une panne de
 * 🔄 **Basculement automatique :** Réattribue de manière transparente les missions des nœuds défaillants vers des nœuds sains.
 * 🛡️ **Redémarrage logiciel (Soft Reboot) :** Tente une récupération de service à distance avant de déclencher une réinitialisation matérielle complète.
 * 📡 **Alertes opérateur :** Notification en temps réel sur toutes les interfaces (Studios, Apps, Watch).
+* 🔁 **Réessais bornés + identité de nœud vérifiée (v0, réel) :** un incident réseau transitoire ne fait plus basculer un nœud vers `UNREACHABLE` dès le premier échec - `checkNode` réessaie avec un backoff exponentiel déterministe et plafonné avant d'abandonner ; un nœud qui répond mais ne peut pas s'auto-identifier correctement est classé `INVALID` et n'est jamais ni fait confiance, ni réessayé, ni rapporté comme sain.
 
 ---
 
@@ -52,6 +53,8 @@ flowchart TB
 * **Pourquoi la détection est déjà réelle aujourd'hui, mais pas encore le basculement/redémarrage logiciel.** `src/watchdog` interroge le `HealthService.Check()` (le contrat gRPC partagé `hydra.common.v1` de `HYDRA-UMC-ORCHESTRATOR/proto/hydra_common.proto`) de chaque nœud enregistré, sur un intervalle réel via une vraie connexion réseau, classe le résultat en HEALTHY/DEGRADED/UNHEALTHY/UNREACHABLE, et déclenche un callback `Reactor` seulement lors d'un *changement* d'état (jamais à chaque cycle). Il n'appelle pas encore HYDRA-UMC-ORCHESTRATOR pour déclencher un vrai basculement ou redémarrage logiciel, car ORCHESTRATOR n'a pas non plus d'API pour cela pour l'instant - `watchdog.Reactor` est le point d'ancrage prévu pour quand elle existera. La détection n'avait pas besoin d'attendre cela pour être réelle.
 * **Pourquoi le registre de nœuds est un fichier JSON statique et non une requête en direct vers HYDRA-UMC-SWARM-SYNC.** SWARM-SYNC (la source de vérité citée à l'origine par le README pour "chaque cellule de l'essaim") n'a pas non plus de vraie API pour l'instant - il en est encore au stade d'andamiaje. Un `nodes.json` statique (voir `nodes.example.json`) est le v0 honnête, pas un placeholder qui prétend être dynamique. Remplacer `src/config.LoadNodes` par un vrai client SWARM-SYNC dès que ce projet en aura un.
 * **Comment cela s'intègre dans le reste de l'écosystème.** Un service frère sous HYDRA-UMC-ORCHESTRATOR - surveille chaque nœud de son registre et signale les changements d'état ; rediriger le travail loin de celui qui cesse de répondre est la couche suivante, construite par-dessus une fois qu'ORCHESTRATOR exposera quelque chose permettant de rediriger le travail.
+* **Pourquoi un échec de transport est réessayé (borné) mais jamais une identité incohérente.** Une connexion refusée ou un timeout RPC peut être un incident vraiment transitoire - un nœud en cours de redémarrage, un bref accroc réseau - donc `checkNode` réessaie jusqu'à `RetryPolicy.MaxAttempts` fois avec un backoff exponentiel avant d'abandonner. Un nœud qui répond mais rapporte le mauvais nom (ou aucun) est un problème d'une tout autre nature : aucune attente ne répare un service branché sur le mauvais port, donc ce cas est classé `StatusInvalid` immédiatement, sans aucun réessai.
+* **Pourquoi le backoff n'a pas de gigue (jitter) aléatoire.** Une vraie flotte de production voudrait de la gigue pour éviter une ruée de reconnexions simultanées, mais ce chien de garde interroge déjà chaque nœud depuis sa propre goroutine à son propre rythme - le seul coût de la gigue ici serait de rendre `RetryPolicy.Backoff()` non déterministe et plus difficile à vérifier dans les tests. À ajouter si/quand ce chien de garde interroge un jour des centaines de nœuds contre une ressource partagée goulot d'étranglement.
 
 ---
 
@@ -65,15 +68,20 @@ HYDRA-UMC-NODE-HEALING/
 │   │                  # hydra_common.proto - voir le proto/README.md de
 │   │                  # ce dépôt pour la commande de génération)
 │   ├── watchdog/      # Boucle de sondage réelle : dial, Check(), classer,
-│   │                  # réagir uniquement lors d'un changement d'état
+│   │                  # réagir uniquement lors d'un changement d'état,
+│   │                  # plus retry.go (RetryPolicy)
 │   └── config/        # Chargeur du registre statique de nœuds (JSON)
 ├── build/             # Binaires compilés (sortie de build.sh/build.bat)
+├── tools/
+│   ├── build_test.py  # Vérification de build sans versionnage
+│   └── ci_validate.py # Validation manifeste/CHANGELOG/docs utilisée par CI
 ├── nodes.example.json # Registre de nœuds d'exemple (voir src/config)
 ├── go.mod / go.sum    # Définition du module Go
 ├── version.go         # const Version = "X.Y.Z" (go.mod n'a pas ce champ)
 ├── main.go            # Point d'entrée : charge le registre et lance le watchdog
 ├── bump_version.py    # Incrément de version type compteur kilométrique
 ├── build.sh/.bat      # Incrémente la version puis `go build`
+├── build-test.sh/.bat # Vérification de build sans versionnage
 ├── run.sh/.bat        # Exécute le binaire compilé
 └── README.md
 ```
@@ -114,9 +122,13 @@ sur son `address` et implémentant `hydra.common.v1.HealthService` (voir
 `HYDRA-UMC-ORCHESTRATOR/proto/hydra_common.proto`) pour un jour se
 signaler en bonne santé - rien ne tournant encore sur les ports
 d'exemple, on s'attend à voir `UNKNOWN -> UNREACHABLE` dès le premier
-cycle pour les trois, ce qui est le résultat correct et honnête
-aujourd'hui (chaque nœud de l'écosystème en est encore au stade
-d'andamiaje au-delà de la propre logique de détection de ce dépôt).
+cycle pour les trois (désormais seulement après épuisement des tentatives
+bornées de `RetryPolicy`, pas dès le premier dial - voir la
+caractéristique « Réessais bornés » ci-dessus), ce qui est le résultat
+correct et honnête aujourd'hui (chaque nœud de l'écosystème en est encore
+au stade d'andamiaje au-delà de la propre logique de détection de ce
+dépôt). Un nœud qui répond mais ne peut pas s'auto-identifier
+correctement affiche plutôt `UNKNOWN -> INVALID`, immédiatement.
 
 ```bash
 go test ./...   # src/config + src/watchdog, allers-retours gRPC

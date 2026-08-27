@@ -20,6 +20,24 @@ semantic-versioning judgment calls:
 
 ---
 
+## [0.0.6] - Real v0: bounded retry policy + rejection of an unverifiable node identity
+
+- **`src/watchdog/retry.go`** (new) - `RetryPolicy{MaxAttempts, BaseDelay, MaxDelay}`, `Validate()`, and `Backoff(attempt)`: deterministic exponential backoff (no jitter, directly assertable in tests) capped at `MaxDelay`. `DefaultRetryPolicy()` (3 attempts, 250ms base, 2s cap) is bounded so a fully-exhausted retry for one node can never push a poll tick past the next one.
+- **`src/watchdog/watchdog.go`** - `checkNode()` split into a retry loop (new) wrapping `attemptCheck()` (the old `checkNode` body): a transport-level failure (dial/RPC error) is retried up to `RetryPolicy.MaxAttempts` times with `Backoff()` between attempts before the node is classified `UNREACHABLE`, masking transient network blips within one poll tick without an open-ended loop.
+- **`src/watchdog/watchdog.go`** - new `StatusInvalid`: a node that answers the RPC but omits `NodeIdentity` or self-identifies under a different name than the one it was registered under is classified `INVALID` and never trusted or retried - unlike a transport failure, no amount of retrying fixes a node that cannot correctly say who it is.
+- `Watchdog.RetryPolicy` field (defaults to `DefaultRetryPolicy()` in `NewWatchdog`); a policy that fails `Validate()` falls back to the default rather than silently disabling retries.
+- 12 new tests: `RetryPolicy.Validate()`/`Backoff()` (boundaries: `MaxDelay == BaseDelay`, `attempt <= 0`, cap reached exactly), a real gRPC integration test where a node starts mid-retry-window and the transient failure never reaches the Reactor, a bounded-time test proving retry exhaustion stays close to the sum of its own backoffs, and two real gRPC tests for `StatusInvalid` (missing identity, mismatched identity) confirming the rejection is immediate, not retried. 17 tests total.
+- Fixed `build.sh`: called `bump_manifest_version.py` (no `--sync`) before `bump_version.py`, double-bumping the native version one step ahead of the manifest - reordered to match `build.bat`'s already-correct native-bump-then-sync sequence.
+- Real verification beyond the test suite: ran the compiled binary against `nodes.example.json` (no real nodes running) and confirmed each entry now takes visibly longer to reach `UNREACHABLE` (the retry+backoff window), not an instant single-attempt failure.
+
+## [0.0.5]
+
+- Build version synchronized with `hydra-umc.project.json` and the repository-native version source.
+
+## [0.0.4]
+
+- Build version synchronized with `hydra-umc.project.json` and the repository-native version source.
+
 ## [0.0.3] - Source layout: `src/` instead of `internal/`, unused folders removed
 
 - Moved `internal/healthpb`, `internal/watchdog` and `internal/config`

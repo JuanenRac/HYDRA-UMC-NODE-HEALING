@@ -42,6 +42,15 @@ const (
 	// HEALTH_STATE_UNHEALTHY, which requires the node to be alive enough
 	// to answer the RPC and say so about itself.
 	StatusUnreachable
+	// StatusInvalid means the node answered the RPC, but its own
+	// self-reported identity cannot be trusted: either it omitted
+	// NodeIdentity entirely, or it reported a name that does not match
+	// the Node this watchdog dialed. A node that cannot correctly say who
+	// it is must never have its claimed health state trusted either - it
+	// could be a misconfigured service bound to the wrong port. Unlike
+	// StatusUnreachable, this is never retried: retrying does not fix a
+	// node lying about (or not knowing) its own name.
+	StatusInvalid
 )
 
 func (s Status) String() string {
@@ -54,6 +63,8 @@ func (s Status) String() string {
 		return "UNHEALTHY"
 	case StatusUnreachable:
 		return "UNREACHABLE"
+	case StatusInvalid:
+		return "INVALID"
 	default:
 		return "UNKNOWN"
 	}
@@ -104,25 +115,28 @@ func (r LogReactor) OnTransition(node Node, from, to Status, detail string) {
 // Watchdog polls a fixed set of nodes on an interval and reports state
 // transitions (not every tick) to a Reactor.
 type Watchdog struct {
-	Nodes       []Node
-	Interval    time.Duration
+	Nodes        []Node
+	Interval     time.Duration
 	CheckTimeout time.Duration
-	Reactor     Reactor
-	DialOptions []grpc.DialOption // overridable for tests (in-process bufconn)
+	RetryPolicy  RetryPolicy // bounded retries + backoff for transport-level failures - see retry.go
+	Reactor      Reactor
+	DialOptions  []grpc.DialOption // overridable for tests (in-process bufconn)
 
 	mu    sync.Mutex
 	state map[string]Status // keyed by Node.Name
 }
 
 // NewWatchdog builds a Watchdog with production-sane defaults (5s poll
-// interval, 2s per-check timeout, insecure transport credentials - LAN
-// traffic between trusted nodes, same threat model already documented for
+// interval, 2s per-check timeout, DefaultRetryPolicy() for transient
+// network failures, insecure transport credentials - LAN traffic between
+// trusted nodes, same threat model already documented for
 // HYDRA-UMC-SERVER's CORS/mTLS posture).
 func NewWatchdog(nodes []Node, reactor Reactor) *Watchdog {
 	return &Watchdog{
 		Nodes:        nodes,
 		Interval:     5 * time.Second,
 		CheckTimeout: 2 * time.Second,
+		RetryPolicy:  DefaultRetryPolicy(),
 		Reactor:      reactor,
 		DialOptions:  []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())},
 		state:        make(map[string]Status),
@@ -177,16 +191,52 @@ func (w *Watchdog) pollOne(ctx context.Context, n Node) {
 	}
 }
 
-// checkNode performs one real gRPC HealthService.Check() call and
-// classifies the outcome. Exported indirectly via Status() for tests that
-// want a single check without the polling loop.
+// checkNode runs attemptCheck up to RetryPolicy.MaxAttempts times,
+// waiting RetryPolicy.Backoff() between attempts, and returns as soon as
+// an attempt is non-retryable (a real classification, or an invalid
+// identity - see StatusInvalid). Exported indirectly via CheckOnce() for
+// tests and a future CLI subcommand that want a single check without the
+// polling loop.
 func (w *Watchdog) checkNode(ctx context.Context, n Node) (Status, string) {
+	policy := w.RetryPolicy
+	if err := policy.Validate(); err != nil {
+		// A misconfigured policy must never silently disable retries or
+		// panic mid-poll - fall back to a policy known to be sane.
+		policy = DefaultRetryPolicy()
+	}
+
+	var status Status
+	var detail string
+	for attempt := 1; attempt <= policy.MaxAttempts; attempt++ {
+		var retryable bool
+		status, detail, retryable = w.attemptCheck(ctx, n)
+		if !retryable {
+			return status, detail
+		}
+		if attempt < policy.MaxAttempts {
+			timer := time.NewTimer(policy.Backoff(attempt))
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return status, detail
+			case <-timer.C:
+			}
+		}
+	}
+	return status, detail
+}
+
+// attemptCheck performs one real gRPC HealthService.Check() call and
+// classifies the outcome. retryable is true only for transport-level
+// failures (dial/RPC error) - never for a node that answered but cannot
+// be trusted (StatusInvalid), since no amount of retrying fixes that.
+func (w *Watchdog) attemptCheck(ctx context.Context, n Node) (status Status, detail string, retryable bool) {
 	dialCtx, cancel := context.WithTimeout(ctx, w.CheckTimeout)
 	defer cancel()
 
 	conn, err := grpc.DialContext(dialCtx, n.Address, append([]grpc.DialOption{grpc.WithBlock()}, w.DialOptions...)...)
 	if err != nil {
-		return StatusUnreachable, err.Error()
+		return StatusUnreachable, err.Error(), true
 	}
 	defer conn.Close()
 
@@ -195,22 +245,30 @@ func (w *Watchdog) checkNode(ctx context.Context, n Node) (Status, string) {
 	defer cancel2()
 	report, err := client.Check(checkCtx, &healthpb.Empty{})
 	if err != nil {
-		return StatusUnreachable, err.Error()
+		return StatusUnreachable, err.Error(), true
+	}
+
+	identity := report.GetIdentity()
+	if identity == nil || identity.GetName() == "" {
+		return StatusInvalid, fmt.Sprintf("node at %s answered but reported no self-identity - refusing to trust its health state", n.Address), false
+	}
+	if identity.GetName() != n.Name {
+		return StatusInvalid, fmt.Sprintf("node at %s self-identified as %q, expected %q - refusing to trust its health state", n.Address, identity.GetName(), n.Name), false
 	}
 
 	switch report.GetState() {
 	case healthpb.HealthState_HEALTH_STATE_OK:
-		return StatusHealthy, report.GetDetail()
+		return StatusHealthy, report.GetDetail(), false
 	case healthpb.HealthState_HEALTH_STATE_DEGRADED:
-		return StatusDegraded, report.GetDetail()
+		return StatusDegraded, report.GetDetail(), false
 	case healthpb.HealthState_HEALTH_STATE_UNHEALTHY:
-		return StatusUnhealthy, report.GetDetail()
+		return StatusUnhealthy, report.GetDetail(), false
 	default:
 		// A node that answers but reports HEALTH_STATE_UNSPECIFIED is
 		// itself a real signal (it's alive, but its own health logic
 		// hasn't classified itself) - treat it as degraded rather than
 		// silently mapping it to healthy.
-		return StatusDegraded, "node reported HEALTH_STATE_UNSPECIFIED"
+		return StatusDegraded, "node reported HEALTH_STATE_UNSPECIFIED", false
 	}
 }
 

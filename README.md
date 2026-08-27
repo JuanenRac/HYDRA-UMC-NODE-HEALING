@@ -27,6 +27,7 @@ If a node fails due to hardware malfunction or network outage, the Healing Manag
 * 🔄 **Automatic Failover:** Transparently reassigns missions from failed nodes to healthy ones.
 * 🛡️ **Soft Reboot:** Attempts remote service recovery before triggering a full hardware reset.
 * 📡 **Operator Alerts:** Real-time notification across all interfaces (Studios, Apps, Watch).
+* 🔁 **Bounded Retry + Verified Node Identity (v0, real):** a transient network blip no longer flips a node to `UNREACHABLE` on the first miss - `checkNode` retries with a deterministic, capped exponential backoff before giving up; a node that answers but cannot correctly self-identify is classified `INVALID` and never trusted, retried, or reported healthy.
 
 ---
 
@@ -52,6 +53,8 @@ flowchart TB
 * **Why detection is real today but failover/soft-reboot are not.** `src/watchdog` polls every registered node's `HealthService.Check()` (the shared `hydra.common.v1` gRPC contract from `HYDRA-UMC-ORCHESTRATOR/proto/hydra_common.proto`) on a real interval over a real network connection, classifies HEALTHY/DEGRADED/UNHEALTHY/UNREACHABLE, and fires a `Reactor` callback on every state *change* (never every tick). It does not yet call HYDRA-UMC-ORCHESTRATOR to trigger an actual failover or soft-reboot, because ORCHESTRATOR has no API to call for that yet either - `watchdog.Reactor` is the seam where that plugs in once it does. Detection did not need to wait on that to be real.
 * **Why the node registry is a static JSON file, not a live query to HYDRA-UMC-SWARM-SYNC.** SWARM-SYNC (the README's original stated source of truth for "every cell in the swarm") has no real API yet either - it's still andamiaje. A static `nodes.json` (see `nodes.example.json`) is the honest v0, not a placeholder pretending to be dynamic. Swap `src/config.LoadNodes` for a real SWARM-SYNC client once that project has one to call.
 * **How this fits the rest of the ecosystem.** A sibling service under HYDRA-UMC-ORCHESTRATOR - watches every node in its registry and reports state changes; rerouting work away from one that stops responding is the next layer, built on top of this once ORCHESTRATOR exposes something to reroute work through.
+* **Why a transport failure is retried (bounded) but an identity mismatch never is.** A connection refused or an RPC timeout can be a genuinely transient blip - a node mid-restart, a brief network hiccup - so `checkNode` retries it up to `RetryPolicy.MaxAttempts` times with exponential backoff before giving up. A node that answers but reports the wrong name (or none at all) is a different kind of problem entirely: no amount of waiting fixes a service bound to the wrong port, so that case is classified `StatusInvalid` immediately, with zero retries.
+* **Why the backoff has no random jitter.** A real production fleet would want jitter to avoid a thundering herd of simultaneous reconnects, but this watchdog already polls each node from its own goroutine at its own pace - the only thing jitter would cost here is making `RetryPolicy.Backoff()` non-deterministic and harder to assert on in tests. Add jitter if/when this watchdog ever polls hundreds of nodes against a shared bottleneck resource.
 
 ---
 
@@ -65,15 +68,19 @@ HYDRA-UMC-NODE-HEALING/
 │   │                  # hydra_common.proto - see that repo's proto/README.md
 │   │                  # for the codegen command)
 │   ├── watchdog/      # Real polling loop: dial, Check(), classify, react
-│   │                  # on state change only
+│   │                  # on state change only, plus retry.go (RetryPolicy)
 │   └── config/        # Static JSON node registry loader
 ├── build/             # Compiled binaries (build.sh/build.bat output)
+├── tools/
+│   ├── build_test.py  # Non-versioning build/compile check
+│   └── ci_validate.py # Manifest/CHANGELOG/docs validation used by CI
 ├── nodes.example.json # Example node registry (see src/config)
 ├── go.mod / go.sum    # Go module definition
 ├── version.go         # const Version = "X.Y.Z" (go.mod has no app version field)
 ├── main.go            # Entry point: loads the registry, runs the watchdog
 ├── bump_version.py    # Odometer-style version bump, run by build.sh/.bat
 ├── build.sh/.bat      # Bumps version, then `go build`
+├── build-test.sh/.bat # Non-versioning build check (no CHANGELOG/version bump)
 ├── run.sh/.bat        # Runs the compiled binary
 └── README.md
 ```
@@ -111,9 +118,12 @@ Every entry in the registry needs something real listening on its
 `address` and implementing `hydra.common.v1.HealthService` (see
 `HYDRA-UMC-ORCHESTRATOR/proto/hydra_common.proto`) to ever report
 healthy - with nothing running yet on any of the example ports, expect
-every node to print `UNKNOWN -> UNREACHABLE` on the first tick, which is
-the correct, honest result today (every node in this ecosystem is still
-andamiaje beyond this repo's own detection logic).
+every node to print `UNKNOWN -> UNREACHABLE` on the first tick (now only
+after `RetryPolicy` exhausts its bounded attempts, not on the very first
+dial - see the "Bounded Retry" feature above), which is the correct,
+honest result today (every node in this ecosystem is still andamiaje
+beyond this repo's own detection logic). A node that answers but cannot
+correctly self-identify prints `UNKNOWN -> INVALID` instead, immediately.
 
 ```bash
 go test ./...   # src/config + src/watchdog, real gRPC round-trips

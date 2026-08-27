@@ -29,6 +29,7 @@
 * 🔄 **自动故障转移：** 透明地将任务从失效节点重新分配给健康节点。
 * 🛡️ **软重启：** 在触发完整硬件重置之前尝试远程服务恢复。
 * 📡 **操作员告警：** 跨所有界面（Studio、应用程序、Watch）的实时通知。
+* 🔁 **限次重试 + 已验证节点身份（v0，真实）：** 一次瞬时网络故障不再让节点在第一次失败时就被判为 `UNREACHABLE`——`checkNode` 会先以确定性的、有上限的指数退避重试，然后才放弃；一个应答了但无法正确自证身份的节点会被分类为 `INVALID`，永远不会被信任、重试或报告为健康。
 
 ---
 
@@ -54,6 +55,8 @@ flowchart TB
 * **为何检测机制今天已经真实可用，而故障转移/软重启尚未实现。** `src/watchdog` 会对每个已注册的节点真实调用 `HealthService.Check()`（来自 `HYDRA-UMC-ORCHESTRATOR/proto/hydra_common.proto` 的共享 `hydra.common.v1` gRPC 契约），基于真实的时间间隔和真实的网络连接，将结果分类为 HEALTHY/DEGRADED/UNHEALTHY/UNREACHABLE 之一，并且只在状态*发生变化*时触发一次 `Reactor` 回调（绝不会每个轮询周期都触发）。它尚未调用 HYDRA-UMC-ORCHESTRATOR 来触发真正的故障转移或软重启，因为 ORCHESTRATOR 目前同样没有可供调用的相关 API——`watchdog.Reactor` 正是为此预留的接入点。检测功能不需要等到那一步才能成为真实功能。
 * **为何节点注册表是静态 JSON 而非对 HYDRA-UMC-SWARM-SYNC 的实时查询。** SWARM-SYNC（README 最初所称"整个蜂群中每个单元"的真相来源）目前同样没有真实 API——它仍处于脚手架阶段。一个静态的 `nodes.json`（见 `nodes.example.json`）才是诚实的 v0 版本，而不是一个假装动态的占位符。一旦 SWARM-SYNC 项目具备真实客户端，即可替换 `src/config.LoadNodes`。
 * **这如何融入生态系统的其余部分。** 作为 HYDRA-UMC-ORCHESTRATOR 下的同级服务——监视其注册表中的每个节点并报告状态变化；将工作从停止响应的节点重新路由出去是构建于此之上的下一层，待 ORCHESTRATOR 提供可供路由工作的接口后实现。
+* **为何传输失败会被重试（限次），但身份不匹配永远不会。** 连接被拒绝或 RPC 超时可能是真正短暂的故障——一个正在重启的节点、一次短暂的网络卡顿——所以 `checkNode` 会用指数退避重试最多 `RetryPolicy.MaxAttempts` 次才放弃。一个应答了但报告错误名称（或根本没报告）的节点则是完全不同性质的问题：无论等多久都修复不了一个绑在错误端口上的服务，所以这种情况会立即被分类为 `StatusInvalid`，不做任何重试。
+* **为何退避没有随机抖动（jitter）。** 一支真正的生产集群会想要抖动，以避免大量连接同时涌回造成的"惊群"效应，但这个看门狗本来就是每个节点各自用自己的 goroutine、按自己的节奏轮询——这里加入抖动唯一的代价就是让 `RetryPolicy.Backoff()` 变得不确定，更难在测试里断言。如果/当这个看门狗有朝一日需要对着数百个节点、共享同一个存在瓶颈的资源做轮询时，再加入抖动。
 
 ---
 
@@ -67,15 +70,20 @@ HYDRA-UMC-NODE-HEALING/
 │   │                  # hydra_common.proto——生成命令见该仓库的
 │   │                  # proto/README.md)
 │   ├── watchdog/      # 真实的轮询循环：拨号、Check()、分类，
-│   │                  # 仅在状态变化时才作出响应
+│   │                  # 仅在状态变化时才作出响应，以及
+│   │                  # retry.go（RetryPolicy）
 │   └── config/        # 静态 JSON 节点注册表加载器
 ├── build/             # 编译后的二进制文件（build.sh/build.bat 的输出）
+├── tools/
+│   ├── build_test.py  # 不递增版本号的构建检查
+│   └── ci_validate.py # CI 使用的清单/CHANGELOG/文档校验
 ├── nodes.example.json # 示例节点注册表（见 src/config）
 ├── go.mod / go.sum    # Go 模块定义
 ├── version.go         # const Version = "X.Y.Z"（go.mod 没有应用版本字段）
 ├── main.go            # 入口点：加载注册表并启动看门狗
 ├── bump_version.py    # 里程表式版本递增，由 build.sh/.bat 运行
 ├── build.sh/.bat      # 递增版本号，然后执行 `go build`
+├── build-test.sh/.bat # 不递增版本号的构建检查
 ├── run.sh/.bat        # 运行编译后的二进制文件
 └── README.md
 ```
@@ -114,8 +122,11 @@ run.bat -nodes nodes.example.json
 `hydra.common.v1.HealthService`（见
 `HYDRA-UMC-ORCHESTRATOR/proto/hydra_common.proto`），才能被报告为健康
 状态——由于示例端口上目前尚无任何服务运行，预计三个节点在第一个轮询
-周期都会显示 `UNKNOWN -> UNREACHABLE`，这在今天是正确且诚实的结果
-（生态系统中的每个节点，除了本仓库自身的检测逻辑外，仍处于脚手架阶段）。
+周期都会显示 `UNKNOWN -> UNREACHABLE`（现在只会在 `RetryPolicy` 的
+限次重试耗尽之后才会如此，而非第一次拨号就判定——见上方的"限次重试"
+特性），这在今天是正确且诚实的结果（生态系统中的每个节点，除了本
+仓库自身的检测逻辑外，仍处于脚手架阶段）。一个应答了但无法正确自证
+身份的节点则会立即显示 `UNKNOWN -> INVALID`。
 
 ```bash
 go test ./...   # src/config + src/watchdog，基于真实回环套接字

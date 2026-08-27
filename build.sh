@@ -3,7 +3,6 @@
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
 # GPL-3.0 - see LICENSE
 set -euo pipefail
-python3 "$(dirname "$0")/bump_manifest_version.py" || exit 1
 cd "$(dirname "$0")"
 
 # Keep the window open if this was double-clicked (e.g. from a file
@@ -13,7 +12,12 @@ cd "$(dirname "$0")"
 trap '[ -t 0 ] && read -r -p "Press Enter to close..." _' EXIT
 
 echo "=== HYDRA-UMC-NODE-HEALING build ==="
-python3 bump_version.py || echo "WARNING: could not bump version, continuing build anyway."
+# Bump the real, native version FIRST, then sync the manifest to match
+# (--sync) - never the other way around, or bump_manifest_version.py's
+# own no-flag path bumps native+manifest together and this next line
+# bumps native a second time, leaving it one step ahead of the manifest.
+python3 bump_version.py || exit 1
+python3 bump_manifest_version.py --sync || exit 1
 
 mkdir -p build
 go build -o build/hydra-umc-node-healing .

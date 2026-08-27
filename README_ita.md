@@ -27,6 +27,7 @@ Se un nodo fallisce a causa di un malfunzionamento dell'hardware o di un'interru
 * 🔄 **Failover automatico:** Riassegna in modo trasparente le missioni dai nodi falliti a quelli sani.
 * 🛡️ **Soft Reboot:** Tenta il ripristino del servizio remoto prima di attivare un ripristino hardware completo.
 * 📡 **Avvisi operatore:** Notifica in tempo reale su tutte le interfacce (Studio, App, Watch).
+* 🔁 **Retry limitati + identità del nodo verificata (v0, reale):** un guasto di rete transitorio non fa più passare un nodo a `UNREACHABLE` al primo fallimento - `checkNode` riprova con un backoff esponenziale deterministico e limitato prima di arrendersi; un nodo che risponde ma non riesce ad autoidentificarsi correttamente viene classificato `INVALID` e non viene mai considerato affidabile, ritentato, o riportato come sano.
 
 ---
 
@@ -52,6 +53,8 @@ flowchart TB
 * **Perché il rilevamento è già reale oggi, ma failover/soft-reboot no.** `src/watchdog` interroga `HealthService.Check()` (il contratto gRPC condiviso `hydra.common.v1` di `HYDRA-UMC-ORCHESTRATOR/proto/hydra_common.proto`) di ogni nodo registrato, su un intervallo reale e una connessione di rete reale, classifica il risultato in HEALTHY/DEGRADED/UNHEALTHY/UNREACHABLE, e attiva un callback `Reactor` solo quando lo stato *cambia* (mai a ogni ciclo). Non chiama ancora HYDRA-UMC-ORCHESTRATOR per innescare un vero failover o soft-reboot, perché nemmeno ORCHESTRATOR ha ancora un'API per questo - `watchdog.Reactor` è il punto di innesto per quando ce l'avrà. Il rilevamento non doveva aspettare quello per essere reale.
 * **Perché il registro dei nodi è un JSON statico e non una query live a HYDRA-UMC-SWARM-SYNC.** SWARM-SYNC (la fonte di verità originariamente citata dal README per "ogni cella dello sciame") non ha ancora nemmeno lei un'API reale - è ancora in fase di andamiaje. Un `nodes.json` statico (vedi `nodes.example.json`) è il v0 onesto, non un placeholder che finge di essere dinamico. Sostituire `src/config.LoadNodes` con un vero client SWARM-SYNC non appena quel progetto ne avrà uno.
 * **Come si inserisce nel resto dell'ecosistema.** Un servizio fratello sotto HYDRA-UMC-ORCHESTRATOR - sorveglia ogni nodo del suo registro e segnala i cambi di stato; reindirizzare il lavoro lontano da quello che smette di rispondere è il livello successivo, costruito sopra questo non appena ORCHESTRATOR esporrà qualcosa attraverso cui reindirizzare il lavoro.
+* **Perché un fallimento di trasporto viene ritentato (in modo limitato) ma un'identità non corrispondente mai.** Una connessione rifiutata o un timeout RPC può essere un guasto genuinamente transitorio - un nodo in fase di riavvio, un breve intoppo di rete - quindi `checkNode` lo ritenta fino a `RetryPolicy.MaxAttempts` volte con backoff esponenziale prima di arrendersi. Un nodo che risponde ma segnala il nome sbagliato (o nessuno) è un problema di natura completamente diversa: nessuna attesa risolve un servizio collegato alla porta sbagliata, quindi quel caso viene classificato `StatusInvalid` immediatamente, senza alcun retry.
+* **Perché il backoff non ha jitter casuale.** Una vera flotta di produzione vorrebbe jitter per evitare un'ondata di riconnessioni simultanee, ma questo watchdog interroga già ogni nodo dalla propria goroutine al proprio ritmo - l'unico costo del jitter qui sarebbe rendere `RetryPolicy.Backoff()` non deterministico e più difficile da verificare nei test. Da aggiungere se/quando questo watchdog dovesse interrogare centinaia di nodi contro una risorsa condivisa che fa da collo di bottiglia.
 
 ---
 
@@ -65,15 +68,20 @@ HYDRA-UMC-NODE-HEALING/
 │   │                  # hydra_common.proto - vedi il proto/README.md di
 │   │                  # quel repo per il comando di generazione)
 │   ├── watchdog/      # Ciclo di polling reale: dial, Check(), classificare,
-│   │                  # reagire solo a un cambio di stato
+│   │                  # reagire solo a un cambio di stato, più
+│   │                  # retry.go (RetryPolicy)
 │   └── config/        # Caricatore del registro statico dei nodi (JSON)
 ├── build/             # Binari compilati (output di build.sh/build.bat)
+├── tools/
+│   ├── build_test.py  # Controllo build senza versionamento
+│   └── ci_validate.py # Validazione manifest/CHANGELOG/docs usata dalla CI
 ├── nodes.example.json # Registro nodi di esempio (vedi src/config)
 ├── go.mod / go.sum    # Definizione del modulo Go
 ├── version.go         # const Version = "X.Y.Z" (go.mod non ha questo campo)
 ├── main.go            # Punto di ingresso: carica il registro e avvia il watchdog
 ├── bump_version.py    # Bump di versione stile contachilometri
 ├── build.sh/.bat      # Aggiorna la versione, poi `go build`
+├── build-test.sh/.bat # Controllo build senza versionamento
 ├── run.sh/.bat        # Esegue il binario compilato
 └── README.md
 ```
@@ -112,9 +120,13 @@ Ogni voce del registro ha bisogno di qualcosa di reale in ascolto sul suo
 `HYDRA-UMC-ORCHESTRATOR/proto/hydra_common.proto`) per poter mai
 risultare in salute - non essendoci ancora nulla in esecuzione sulle porte
 di esempio, ci si aspetta `UNKNOWN -> UNREACHABLE` al primo ciclo per
-tutti e tre, che è il risultato corretto e onesto oggi (ogni nodo
+tutti e tre (ora solo dopo l'esaurimento dei tentativi limitati di
+`RetryPolicy`, non al primo dial - vedi la funzionalità "Retry limitati"
+sopra), che è il risultato corretto e onesto oggi (ogni nodo
 dell'ecosistema è ancora in fase di andamiaje al di là della logica di
-rilevamento di questo stesso repo).
+rilevamento di questo stesso repo). Un nodo che risponde ma non riesce ad
+autoidentificarsi correttamente stampa invece `UNKNOWN -> INVALID`,
+immediatamente.
 
 ```bash
 go test ./...   # src/config + src/watchdog, round-trip gRPC

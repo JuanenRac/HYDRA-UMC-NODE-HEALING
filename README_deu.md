@@ -27,6 +27,7 @@ Wenn ein Knoten aufgrund einer Hardware-Fehlfunktion oder eines Netzwerkausfalls
 * 🔄 **Automatisches Failover:** Reassembliert Missionen von ausgefallenen Knoten transparent auf gesunde Knoten.
 * 🛡️ **Soft Reboot:** Versucht eine Remote-Dienstwiederherstellung, bevor ein vollständiger Hardware-Reset ausgelöst wird.
 * 📡 **Bediener-Alarme:** Echtzeit-Benachrichtigung über alle Schnittstellen (Studios, Apps, Watch).
+* 🔁 **Begrenzte Retries + verifizierte Knotenidentität (v0, echt):** ein vorübergehender Netzwerkausfall kippt einen Knoten nicht mehr beim ersten Fehlschlag auf `UNREACHABLE` - `checkNode` wiederholt mit einem deterministischen, gedeckelten exponentiellen Backoff, bevor es aufgibt; ein Knoten, der antwortet, sich aber nicht korrekt selbst identifizieren kann, wird als `INVALID` klassifiziert und niemals vertraut, wiederholt oder als gesund gemeldet.
 
 ---
 
@@ -52,6 +53,8 @@ flowchart TB
 * **Warum die Erkennung heute schon echt ist, Failover/Soft-Reboot aber nicht.** `src/watchdog` fragt bei jedem registrierten Knoten `HealthService.Check()` ab (den geteilten `hydra.common.v1`-gRPC-Vertrag aus `HYDRA-UMC-ORCHESTRATOR/proto/hydra_common.proto`), in einem echten Intervall über eine echte Netzwerkverbindung, klassifiziert das Ergebnis als HEALTHY/DEGRADED/UNHEALTHY/UNREACHABLE und löst einen `Reactor`-Callback nur bei einer tatsächlichen Zustands*änderung* aus (nie bei jedem Zyklus). Es ruft noch nicht HYDRA-UMC-ORCHESTRATOR auf, um einen echten Failover oder Soft-Reboot auszulösen, weil ORCHESTRATOR dafür ebenfalls noch keine API hat - `watchdog.Reactor` ist die Nahtstelle für später. Die Erkennung musste darauf nicht warten, um echt zu sein.
 * **Warum das Knotenregister eine statische JSON-Datei ist und keine Live-Abfrage an HYDRA-UMC-SWARM-SYNC.** SWARM-SYNC (die vom README ursprünglich genannte Quelle der Wahrheit für "jede Zelle des Schwarms") hat ebenfalls noch keine echte API - es befindet sich noch im Andamiaje-Stadium. Ein statisches `nodes.json` (siehe `nodes.example.json`) ist das ehrliche v0, kein Platzhalter, der dynamisch vorgibt zu sein. `src/config.LoadNodes` gegen einen echten SWARM-SYNC-Client austauschen, sobald dieses Projekt einen hat.
 * **Wie sich das ins restliche Ökosystem einfügt.** Ein Geschwisterdienst unter HYDRA-UMC-ORCHESTRATOR - überwacht jeden Knoten in seinem Register und meldet Zustandsänderungen; Arbeit von einem nicht mehr reagierenden Knoten umzuleiten ist die nächste Schicht, aufgebaut hierauf, sobald ORCHESTRATOR etwas bereitstellt, worüber Arbeit umgeleitet werden kann.
+* **Warum ein Transportfehler wiederholt wird (begrenzt), eine falsche Identität aber niemals.** Eine abgelehnte Verbindung oder ein RPC-Timeout kann ein wirklich vorübergehender Ausfall sein - ein neu startender Knoten, ein kurzer Netzwerk-Hänger - daher wiederholt `checkNode` bis zu `RetryPolicy.MaxAttempts` Mal mit exponentiellem Backoff, bevor es aufgibt. Ein Knoten, der antwortet, aber den falschen Namen (oder gar keinen) meldet, ist ein völlig anderes Problem: Kein Warten repariert einen Dienst, der am falschen Port hängt - daher wird dieser Fall sofort als `StatusInvalid` klassifiziert, ganz ohne Wiederholung.
+* **Warum der Backoff keinen zufälligen Jitter hat.** Eine echte Produktionsflotte würde Jitter wollen, um einen Ansturm gleichzeitiger Neuverbindungen zu vermeiden, aber dieser Watchdog fragt bereits jeden Knoten aus seiner eigenen Goroutine in seinem eigenen Tempo ab - das Einzige, was Jitter hier kosten würde, ist `RetryPolicy.Backoff()` nicht-deterministisch und in Tests schwerer zu verifizieren zu machen. Jitter hinzufügen, falls/wenn dieser Watchdog jemals Hunderte von Knoten gegen eine gemeinsame Engpassressource abfragt.
 
 ---
 
@@ -65,15 +68,20 @@ HYDRA-UMC-NODE-HEALING/
 │   │                  # hydra_common.proto - siehe proto/README.md
 │   │                  # dieses Repos für den Codegen-Befehl)
 │   ├── watchdog/      # Echte Polling-Schleife: dial, Check(), klassifizieren,
-│   │                  # nur bei Zustandsänderung reagieren
+│   │                  # nur bei Zustandsänderung reagieren, plus
+│   │                  # retry.go (RetryPolicy)
 │   └── config/        # Lader für das statische JSON-Knotenregister
 ├── build/             # Kompilierte Binärdateien (Ausgabe von build.sh/.bat)
+├── tools/
+│   ├── build_test.py  # Nicht-versionierender Build-Check
+│   └── ci_validate.py # Manifest/CHANGELOG/Docs-Validierung, von CI genutzt
 ├── nodes.example.json # Beispiel-Knotenregister (siehe src/config)
 ├── go.mod / go.sum    # Go-Modul-Definition
 ├── version.go         # const Version = "X.Y.Z" (go.mod hat kein solches Feld)
 ├── main.go            # Einstiegspunkt: lädt das Register und startet den Watchdog
 ├── bump_version.py    # Versions-Bump nach Kilometerzähler-Prinzip
 ├── build.sh/.bat      # Erhöht die Version, dann `go build`
+├── build-test.sh/.bat # Nicht-versionierender Build-Check
 ├── run.sh/.bat        # Führt die kompilierte Binärdatei aus
 └── README.md
 ```
@@ -113,9 +121,13 @@ lauscht und `hydra.common.v1.HealthService` implementiert (siehe
 `HYDRA-UMC-ORCHESTRATOR/proto/hydra_common.proto`), um jemals als
 gesund gemeldet zu werden - da auf den Beispiel-Ports noch nichts läuft,
 ist beim ersten Zyklus für alle drei `UNKNOWN -> UNREACHABLE` zu
-erwarten, was heute das korrekte, ehrliche Ergebnis ist (jeder Knoten
-des Ökosystems ist über die eigene Erkennungslogik dieses Repos hinaus
-noch im Andamiaje-Stadium).
+erwarten (jetzt erst nach Erschöpfung der begrenzten Versuche von
+`RetryPolicy`, nicht schon beim ersten Dial - siehe die Funktion
+"Begrenzte Retries" oben), was heute das korrekte, ehrliche Ergebnis ist
+(jeder Knoten des Ökosystems ist über die eigene Erkennungslogik dieses
+Repos hinaus noch im Andamiaje-Stadium). Ein Knoten, der antwortet, sich
+aber nicht korrekt selbst identifizieren kann, gibt stattdessen sofort
+`UNKNOWN -> INVALID` aus.
 
 ```bash
 go test ./...   # src/config + src/watchdog, echte gRPC-Roundtrips

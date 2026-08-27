@@ -28,14 +28,18 @@ import (
 // down entirely (simulating a crash/network partition).
 type fakeNode struct {
 	healthpb.UnimplementedHealthServiceServer
-	mu    sync.Mutex
-	state healthpb.HealthState
-	name  string
+	mu           sync.Mutex
+	state        healthpb.HealthState
+	name         string
+	omitIdentity bool // simulates a node that answers but reports no NodeIdentity
 }
 
 func (f *fakeNode) Check(ctx context.Context, _ *healthpb.Empty) (*healthpb.HealthReport, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if f.omitIdentity {
+		return &healthpb.HealthReport{State: f.state}, nil
+	}
 	return &healthpb.HealthReport{
 		Identity: &healthpb.NodeIdentity{Name: f.name},
 		State:    f.state,
@@ -156,6 +160,135 @@ func TestWatchdog_DetectsUnreachableThenRecovered(t *testing.T) {
 		if got[i] != want[i] {
 			t.Fatalf("transitions = %v, want %v", got, want)
 		}
+	}
+}
+
+func TestWatchdog_RetryMasksTransientFailureWithinOnePollTick(t *testing.T) {
+	// Reserve a free address, then release it immediately - dialing it
+	// now fails fast (connection refused), simulating a node that is
+	// still starting up. A real server binds the SAME address partway
+	// through the retry loop's backoff window, simulating the node
+	// coming up mid-tick.
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("net.Listen: %v", err)
+	}
+	addr := lis.Addr().String()
+	lis.Close()
+
+	go func() {
+		time.Sleep(250 * time.Millisecond)
+		lis2, err := net.Listen("tcp", addr)
+		if err != nil {
+			return // best-effort; the assertion below will fail loudly if this never comes up
+		}
+		srv := grpc.NewServer()
+		healthpb.RegisterHealthServiceServer(srv, &fakeNode{name: "slow-starting-node", state: healthpb.HealthState_HEALTH_STATE_OK})
+		_ = srv.Serve(lis2)
+	}()
+
+	reactor := &recordingReactor{}
+	wd := NewWatchdog([]Node{{Name: "slow-starting-node", Address: addr}}, reactor)
+	wd.DialOptions = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	wd.CheckTimeout = 300 * time.Millisecond
+	// 5 attempts, 100ms base delay: attempt1 fails immediately, wait
+	// 100ms, attempt2 (t~100ms) still too early, wait 200ms, attempt3
+	// (t~300ms) should succeed since the server binds at t~250ms.
+	wd.RetryPolicy = RetryPolicy{MaxAttempts: 5, BaseDelay: 100 * time.Millisecond, MaxDelay: time.Second}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	status, detail := wd.CheckOnce(ctx, Node{Name: "slow-starting-node", Address: addr})
+
+	if status != StatusHealthy {
+		t.Fatalf("status = %s (%s), want HEALTHY - the retry policy should have masked the transient startup failure", status, detail)
+	}
+}
+
+func TestWatchdog_ExhaustsRetriesWithinBoundedTime(t *testing.T) {
+	// A node that is genuinely down for the whole check: verifies the
+	// retry loop is actually bounded (finishes close to the sum of its
+	// own backoffs, not left to hang or retry forever).
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("net.Listen: %v", err)
+	}
+	addr := lis.Addr().String()
+	lis.Close() // nothing ever listens again - genuinely down
+
+	reactor := &recordingReactor{}
+	wd := NewWatchdog([]Node{{Name: "down-node", Address: addr}}, reactor)
+	wd.DialOptions = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	wd.CheckTimeout = 200 * time.Millisecond
+	wd.RetryPolicy = RetryPolicy{MaxAttempts: 3, BaseDelay: 50 * time.Millisecond, MaxDelay: 200 * time.Millisecond}
+	// Worst case: 3 failed dials (fast, connection refused) + backoffs of
+	// 50ms and 100ms between them = ~150ms of deliberate waiting, well
+	// under this generous 3s ceiling that only catches an actually-unbounded loop.
+	const ceiling = 3 * time.Second
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	start := time.Now()
+	status, _ := wd.CheckOnce(ctx, Node{Name: "down-node", Address: addr})
+	elapsed := time.Since(start)
+
+	if status != StatusUnreachable {
+		t.Fatalf("status = %s, want UNREACHABLE", status)
+	}
+	if elapsed > ceiling {
+		t.Fatalf("CheckOnce took %v, want <= %v (retry policy must be bounded)", elapsed, ceiling)
+	}
+}
+
+func TestWatchdog_RejectsNodeWithMismatchedIdentity(t *testing.T) {
+	// The node at this address is real and healthy, but self-identifies
+	// under a different name than the one this watchdog registered it
+	// under - e.g. a misconfigured deployment or the wrong service bound
+	// to this port. Its claimed health state must not be trusted.
+	addr, _, stop := startFakeNode(t, "actual-node-name")
+	defer stop()
+
+	wd := NewWatchdog([]Node{{Name: "expected-node-name", Address: addr}}, nil)
+	wd.DialOptions = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	start := time.Now()
+	status, detail := wd.CheckOnce(ctx, Node{Name: "expected-node-name", Address: addr})
+	elapsed := time.Since(start)
+
+	if status != StatusInvalid {
+		t.Fatalf("status = %s (%s), want INVALID", status, detail)
+	}
+	// Must return promptly, not after exhausting the retry policy - an
+	// identity mismatch is not a transient failure a retry could fix.
+	if elapsed > time.Second {
+		t.Fatalf("CheckOnce took %v to reject a mismatched identity, want < 1s (should not retry)", elapsed)
+	}
+}
+
+func TestWatchdog_RejectsNodeWithNoIdentity(t *testing.T) {
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("net.Listen: %v", err)
+	}
+	srv := grpc.NewServer()
+	node := &fakeNode{name: "", state: healthpb.HealthState_HEALTH_STATE_OK, omitIdentity: true}
+	healthpb.RegisterHealthServiceServer(srv, node)
+	go func() { _ = srv.Serve(lis) }()
+	defer srv.GracefulStop()
+
+	wd := NewWatchdog([]Node{{Name: "some-node", Address: lis.Addr().String()}}, nil)
+	wd.DialOptions = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	status, detail := wd.CheckOnce(ctx, Node{Name: "some-node", Address: lis.Addr().String()})
+
+	if status != StatusInvalid {
+		t.Fatalf("status = %s (%s), want INVALID", status, detail)
 	}
 }
 
