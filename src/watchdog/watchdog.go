@@ -117,8 +117,7 @@ type Watchdog struct {
 // NewWatchdog builds a Watchdog with production-sane defaults (5s poll
 // interval, 2s per-check timeout, insecure transport credentials - LAN
 // traffic between trusted nodes, same threat model already documented for
-// HYDRA-UMC-SERVER's own CORS/mTLS decision in
-// SONNET/HYDRA-UMC-SERVER/mejoras_futuras.txt).
+// HYDRA-UMC-SERVER's CORS/mTLS posture).
 func NewWatchdog(nodes []Node, reactor Reactor) *Watchdog {
 	return &Watchdog{
 		Nodes:        nodes,
