@@ -20,6 +20,11 @@ semantic-versioning judgment calls:
 
 ---
 
+## [0.0.7] - `LoadNodes` rejects a duplicate node `name`
+
+- **`src/config/config.go`** - found in a live ecosystem bug audit: `LoadNodes` validated an empty `name` and an empty `address` per entry but never checked a `name` against the other entries in the same registry. `Watchdog.state` (`src/watchdog/watchdog.go`) is keyed by `Node.Name` alone, so two registry entries sharing a `name` with different `address` values (a realistic copy-paste mistake when adding another instance of a node) would silently share one map slot - whichever node polled last would overwrite the other's classification, and a real failure could end up masked behind the other node's healthy status. `LoadNodes` now tracks every `name` it has already accepted and returns an error naming both the offending entry's index and the earlier entry it duplicates as soon as a repeat is seen, instead of building a registry that two different nodes silently fight over.
+- New `TestLoadNodes_DuplicateName` in `src/config/config_test.go` builds a two-entry registry that shares a `name` with different `address` values and asserts `LoadNodes` returns a non-nil error naming the duplicated `name`. All existing `config` and `watchdog` tests pass unchanged (18 tests total).
+
 ## [0.0.6] - Real v0: bounded retry policy + rejection of an unverifiable node identity
 
 - **`src/watchdog/retry.go`** (new) - `RetryPolicy{MaxAttempts, BaseDelay, MaxDelay}`, `Validate()`, and `Backoff(attempt)`: deterministic exponential backoff (no jitter, directly assertable in tests) capped at `MaxDelay`. `DefaultRetryPolicy()` (3 attempts, 250ms base, 2s cap) is bounded so a fully-exhausted retry for one node can never push a poll tick past the next one.

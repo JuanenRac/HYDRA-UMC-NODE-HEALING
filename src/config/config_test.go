@@ -6,6 +6,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -53,6 +54,20 @@ func TestLoadNodes_MissingAddress(t *testing.T) {
 	path := writeTemp(t, `[{"name": "HYDRA-UMC-VISION-NODE"}]`)
 	if _, err := LoadNodes(path); err == nil {
 		t.Fatal("expected an error for an entry missing \"address\", got nil")
+	}
+}
+
+func TestLoadNodes_DuplicateName(t *testing.T) {
+	path := writeTemp(t, `[
+		{"name": "HYDRA-UMC-VISION-NODE", "address": "127.0.0.1:50101"},
+		{"name": "HYDRA-UMC-VISION-NODE", "address": "127.0.0.1:50102"}
+	]`)
+	_, err := LoadNodes(path)
+	if err == nil {
+		t.Fatal("expected an error for a duplicate \"name\", got nil")
+	}
+	if !strings.Contains(err.Error(), "HYDRA-UMC-VISION-NODE") {
+		t.Fatalf("error %q does not name the offending duplicate", err.Error())
 	}
 }
 

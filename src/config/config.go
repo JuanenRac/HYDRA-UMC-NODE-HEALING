@@ -39,6 +39,7 @@ func LoadNodes(path string) ([]watchdog.Node, error) {
 		return nil, fmt.Errorf("node registry %q is empty - nothing to watch", path)
 	}
 	nodes := make([]watchdog.Node, 0, len(entries))
+	seen := make(map[string]int, len(entries))
 	for i, e := range entries {
 		if e.Name == "" {
 			return nil, fmt.Errorf("node registry %q: entry %d has no \"name\"", path, i)
@@ -46,6 +47,13 @@ func LoadNodes(path string) ([]watchdog.Node, error) {
 		if e.Address == "" {
 			return nil, fmt.Errorf("node registry %q: entry %d (%s) has no \"address\"", path, i, e.Name)
 		}
+		// Watchdog.state is keyed by Name alone (see watchdog.go), so two
+		// entries sharing a name would silently overwrite each other's
+		// state on every poll - fail loudly here instead.
+		if first, dup := seen[e.Name]; dup {
+			return nil, fmt.Errorf("node registry %q: entry %d (%s) duplicates the \"name\" of entry %d - names must be unique", path, i, e.Name, first)
+		}
+		seen[e.Name] = i
 		nodes = append(nodes, watchdog.Node{Name: e.Name, Address: e.Address})
 	}
 	return nodes, nil
