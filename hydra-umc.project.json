@@ -14,7 +14,7 @@
   "family": "Orchestration & Swarm",
   "parent": "HYDRA-UMC-ORCHESTRATOR",
   "build": "go build ./...",
-  "notes": "Established v0: real gRPC-based health watchdog (detection only - real failover/soft-reboot needs HYDRA-UMC-ORCHESTRATOR to expose an API that doesn't exist yet, see watchdog.Reactor). checkNode now retries a transport-level failure (dial/RPC error) via a bounded, deterministic RetryPolicy (default 3 attempts, exponential backoff 250ms->2s cap) before classifying a node UNREACHABLE, masking transient network blips without an open-ended retry loop. A node that answers but misreports its own identity (missing or mismatched NodeIdentity.Name) is classified StatusInvalid and never trusted or retried - retrying cannot fix a node lying about its own name. 17 tests.",
+  "notes": "Established v0: real gRPC-based health watchdog (detection only - real failover/soft-reboot needs HYDRA-UMC-ORCHESTRATOR to expose an API that doesn't exist yet, see watchdog.Reactor). checkNode now retries a transport-level failure (dial/RPC error) via a bounded, deterministic RetryPolicy (default 3 attempts, exponential backoff 250ms->2s cap) before classifying a node UNREACHABLE, masking transient network blips without an open-ended retry loop. A node that answers but misreports its own identity (missing or mismatched NodeIdentity.Name) is classified StatusInvalid and never trusted or retried - retrying cannot fix a node lying about its own name. 22 tests.",
   "native_version": {
     "file": "version.go",
     "pattern": "Version\\s*=\\s*\"(\\d+)\\.(\\d+)\\.(\\d+)\""
