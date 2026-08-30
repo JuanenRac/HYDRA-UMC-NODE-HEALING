@@ -70,6 +70,9 @@ func (p RetryPolicy) Backoff(attempt int) time.Duration {
 		if delay >= p.MaxDelay {
 			return p.MaxDelay
 		}
+		if delay > p.MaxDelay/2 {
+			return p.MaxDelay
+		}
 		delay *= 2
 	}
 	if delay > p.MaxDelay {

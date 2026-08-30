@@ -20,6 +20,14 @@ semantic-versioning judgment calls:
 
 ---
 
+## Unreleased - overflow-safe retry backoff
+
+- Retry backoff now caps before a duration doubling could overflow. Extreme
+  but valid retry-policy bounds remain finite and cannot become a negative
+  delay that alters watchdog retry behaviour.
+
+---
+
 ## [0.0.8] - New docs/ reference set
 
 - **`docs/ARCHITECTURE.md`, `docs/BUILD_AND_RUN.md`,

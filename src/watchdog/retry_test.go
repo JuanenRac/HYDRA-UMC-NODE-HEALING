@@ -92,6 +92,20 @@ func TestRetryPolicy_Backoff_NeverExceedsMaxDelayEvenAtBoundary(t *testing.T) {
 	}
 }
 
+func TestRetryPolicy_BackoffCannotOverflowBeforeCapping(t *testing.T) {
+	// A configured cap close to Duration's maximum used to allow an
+	// intermediate multiplication to wrap negative before the final cap
+	// check. The result must stay exactly bounded for any attempt count.
+	policy := RetryPolicy{
+		MaxAttempts: 10,
+		BaseDelay:   time.Duration(1<<62 + 1),
+		MaxDelay:    time.Duration(1<<63 - 1),
+	}
+	if got := policy.Backoff(2); got != policy.MaxDelay {
+		t.Fatalf("Backoff(2) = %v, want capped MaxDelay %v", got, policy.MaxDelay)
+	}
+}
+
 func TestDefaultRetryPolicy_IsValid(t *testing.T) {
 	if err := DefaultRetryPolicy().Validate(); err != nil {
 		t.Fatalf("DefaultRetryPolicy().Validate() = %v, want nil", err)
