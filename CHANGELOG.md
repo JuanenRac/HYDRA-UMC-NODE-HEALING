@@ -20,6 +20,21 @@ semantic-versioning judgment calls:
 
 ---
 
+## [0.0.8] - New docs/ reference set
+
+- **`docs/ARCHITECTURE.md`, `docs/BUILD_AND_RUN.md`,
+  `docs/INTEGRATION_CONTRACT.md`** (new) - a real architecture overview
+  (this is a decision-only health/recovery-eligibility engine, never
+  itself authorized to restart/reflash/reconfigure a node), the real
+  build-test-then-release flow (`build-test.sh/.bat` for the
+  deterministic, non-versioning check; `build.sh/.bat` for a real
+  release), and the real integration contract a future adapter must
+  honor (versioned health snapshots, stable node identity, idempotent
+  repeated observations, authenticated/auditable authority required for
+  any real actuation). All 7 README language files' own directory tree
+  updated to reference the new `docs/` folder. Documentation-only - no
+  code changed. 21/21 tests still passing.
+
 ## [0.0.7] - `LoadNodes` rejects a duplicate node `name`
 
 - **`src/config/config.go`** - found in a live ecosystem bug audit: `LoadNodes` validated an empty `name` and an empty `address` per entry but never checked a `name` against the other entries in the same registry. `Watchdog.state` (`src/watchdog/watchdog.go`) is keyed by `Node.Name` alone, so two registry entries sharing a `name` with different `address` values (a realistic copy-paste mistake when adding another instance of a node) would silently share one map slot - whichever node polled last would overwrite the other's classification, and a real failure could end up masked behind the other node's healthy status. `LoadNodes` now tracks every `name` it has already accepted and returns an error naming both the offending entry's index and the earlier entry it duplicates as soon as a repeat is seen, instead of building a registry that two different nodes silently fight over.

@@ -83,6 +83,10 @@ HYDRA-UMC-NODE-HEALING/
 ├── build.sh/.bat      # Aggiorna la versione, poi `go build`
 ├── build-test.sh/.bat # Controllo build senza versionamento
 ├── run.sh/.bat        # Esegue il binario compilato
+├── docs/
+│   ├── ARCHITECTURE.md
+│   ├── BUILD_AND_RUN.md
+│   └── INTEGRATION_CONTRACT.md
 └── README.md
 ```
 

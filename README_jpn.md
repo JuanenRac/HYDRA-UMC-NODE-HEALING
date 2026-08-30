@@ -88,6 +88,10 @@ HYDRA-UMC-NODE-HEALING/
 ├── build.sh/.bat      # バージョンを増加させ、その後 `go build` を実行
 ├── build-test.sh/.bat # バージョンを増やさないビルドチェック
 ├── run.sh/.bat        # コンパイル済みバイナリを実行
+├── docs/
+│   ├── ARCHITECTURE.md
+│   ├── BUILD_AND_RUN.md
+│   └── INTEGRATION_CONTRACT.md
 └── README.md
 ```
 

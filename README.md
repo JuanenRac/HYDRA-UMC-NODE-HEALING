@@ -82,6 +82,10 @@ HYDRA-UMC-NODE-HEALING/
 ├── build.sh/.bat      # Bumps version, then `go build`
 ├── build-test.sh/.bat # Non-versioning build check (no CHANGELOG/version bump)
 ├── run.sh/.bat        # Runs the compiled binary
+├── docs/
+│   ├── ARCHITECTURE.md
+│   ├── BUILD_AND_RUN.md
+│   └── INTEGRATION_CONTRACT.md
 └── README.md
 ```
 

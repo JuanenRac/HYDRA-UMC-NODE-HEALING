@@ -83,6 +83,10 @@ HYDRA-UMC-NODE-HEALING/
 ├── build.sh/.bat      # Erhöht die Version, dann `go build`
 ├── build-test.sh/.bat # Nicht-versionierender Build-Check
 ├── run.sh/.bat        # Führt die kompilierte Binärdatei aus
+├── docs/
+│   ├── ARCHITECTURE.md
+│   ├── BUILD_AND_RUN.md
+│   └── INTEGRATION_CONTRACT.md
 └── README.md
 ```
 

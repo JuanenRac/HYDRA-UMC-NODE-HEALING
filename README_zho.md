@@ -85,6 +85,10 @@ HYDRA-UMC-NODE-HEALING/
 ├── build.sh/.bat      # 递增版本号，然后执行 `go build`
 ├── build-test.sh/.bat # 不递增版本号的构建检查
 ├── run.sh/.bat        # 运行编译后的二进制文件
+├── docs/
+│   ├── ARCHITECTURE.md
+│   ├── BUILD_AND_RUN.md
+│   └── INTEGRATION_CONTRACT.md
 └── README.md
 ```
 
