@@ -4,13 +4,22 @@
 # GPL-3.0-or-later - see LICENSE
 # =============================================================================
 # Not started by install_node_healing.sh - config.LoadNodes() itself
-# refuses an empty registry ("is empty - nothing to watch"), and this
-# repo's own nodes.example.json watches HYDRA-UMC-ORCHESTRATOR/
-# VISION-NODE/COGNITIVE-NODE's HealthService gRPC endpoints, none of
-# which run as real services on this CM5 yet (real, separate future
-# work). Enable only once /etc/hydra-umc-node-healing/nodes.json has been
-# created with at least one real, reachable node - see that install
-# script's own printed instructions.
+# refuses an empty registry ("is empty - nothing to watch"). This repo's
+# own nodes.example.json watches HYDRA-UMC-ORCHESTRATOR/VISION-NODE/
+# COGNITIVE-NODE's HealthService gRPC endpoints - a *different* API
+# surface than any of their real HTTP JSON APIs already installed on
+# this CM5 (HYDRA-UMC-ORCHESTRATOR's own server.rs, for one), so there is
+# still genuinely no real gRPC HealthService anywhere on this device to
+# watch (real, separate future work). Enable only once
+# /etc/hydra-umc-node-healing/nodes.json has been created with at least
+# one real, reachable node - see that install script's own printed
+# instructions.
+#
+# --orchestrator-url is wired to the real HYDRA-UMC-ORCHESTRATOR
+# instance already on this CM5 (install_orchestrator.sh), so the moment
+# a real node IS added to nodes.json, an UNREACHABLE/INVALID transition
+# for it automatically requests real recovery (POST /nodes/:node/recover)
+# instead of only logging - watchdog.OrchestratorReactor, new.
 #
 # This registry deliberately lives OUTSIDE the shared /etc/hydra-umc/
 # tree (0750 root:hydra-umc-agent) - this service's own unprivileged
@@ -28,7 +37,7 @@ Type=simple
 User=hydra-umc-node-healing
 Group=hydra-umc-node-healing
 WorkingDirectory=/opt/hydra-umc/node-healing
-ExecStart=/opt/hydra-umc/node-healing/hydra-umc-node-healing --nodes /etc/hydra-umc-node-healing/nodes.json
+ExecStart=/opt/hydra-umc/node-healing/hydra-umc-node-healing --nodes /etc/hydra-umc-node-healing/nodes.json --orchestrator-url http://127.0.0.1:8114
 Restart=on-failure
 RestartSec=5
 NoNewPrivileges=true

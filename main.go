@@ -8,13 +8,13 @@
 // hydra_common.proto contract vendored in src/healthpb) on a fixed
 // interval, printing every state transition to stdout.
 //
-// Why this doesn't yet trigger real failover/soft-reboot: that requires
-// calling HYDRA-UMC-ORCHESTRATOR with an API that doesn't exist yet
-// either (ORCHESTRATOR is itself andamiaje beyond the proto/ contract
-// added this session). watchdog.Reactor is the seam for that - swap
-// watchdog.LogReactor for a real implementation once ORCHESTRATOR has
-// something to call. Detection working for real today does not require
-// waiting on that.
+// Real failover is now wired in: --orchestrator-url points this at
+// HYDRA-UMC-ORCHESTRATOR's own real POST /nodes/:node/recover
+// (watchdog.OrchestratorReactor, new - the seam watchdog.Reactor always
+// left open for exactly this). Omitted, this falls back to
+// watchdog.LogReactor (detection-only, the previous default) - a real
+// deployment with no Orchestrator running yet loses nothing by leaving
+// this flag unset.
 package main
 
 import (
@@ -31,6 +31,7 @@ import (
 
 func main() {
 	registryPath := flag.String("nodes", "nodes.example.json", "path to the JSON node registry to watch")
+	orchestratorURL := flag.String("orchestrator-url", "", "HYDRA-UMC-ORCHESTRATOR base URL (e.g. http://127.0.0.1:8114) to request real recovery from; empty logs transitions only, same as before this flag existed")
 	flag.Parse()
 
 	fmt.Printf("HYDRA-UMC-NODE-HEALING v%s\n", Version)
@@ -47,7 +48,13 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	wd := watchdog.NewWatchdog(nodes, watchdog.LogReactor{})
+	var reactor watchdog.Reactor = watchdog.LogReactor{}
+	if *orchestratorURL != "" {
+		reactor = watchdog.OrchestratorReactor{BaseURL: *orchestratorURL}
+		fmt.Printf("[node-healing] real recovery requests will be sent to orchestrator at %s\n", *orchestratorURL)
+	}
+
+	wd := watchdog.NewWatchdog(nodes, reactor)
 	wd.Run(ctx)
 
 	fmt.Println("[node-healing] shutting down")

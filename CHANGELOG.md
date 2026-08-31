@@ -28,6 +28,27 @@ semantic-versioning judgment calls:
 
 ---
 
+## [0.1.2] - Real recovery wiring to HYDRA-UMC-ORCHESTRATOR
+
+- **`src/watchdog/orchestrator_reactor.go`** (new) - `OrchestratorReactor`
+  fills the exact seam `watchdog.go`'s own comment has named since
+  `Reactor` was introduced: "swap `watchdog.LogReactor` for a real
+  implementation once ORCHESTRATOR has something to call." It now does -
+  `HYDRA-UMC-ORCHESTRATOR`'s own `POST /nodes/:node/recover` (real since
+  that repo's own 0.0.4). Real logging happens unconditionally first
+  (the same visibility `LogReactor` already provided must never regress);
+  a recovery request only fires for a transition INTO
+  `StatusUnreachable`/`StatusInvalid` - not `Degraded` (still alive,
+  still doing real work) and not a recovery-to-`Healthy` transition
+  (nothing to recover from). Honest, undisguised coupling: this
+  forwards `Node.Name` as-is to Orchestrator's own node-name space -
+  whoever writes `nodes.json` is responsible for keeping the two
+  consistent, this file does not invent a translation between them.
+- **`main.go`** - new `--orchestrator-url` flag; omitted, behavior is
+  unchanged from before this existed (`LogReactor`, detection-only).
+- 6 new tests (`src/watchdog/orchestrator_reactor_test.go`, real HTTP
+  against `httptest.NewServer`) - 24 total.
+
 ## [0.1.1] - The 0.1.0 fix was still wrong: this binary refuses to run with zero nodes
 
 - **`systemd/hydra-umc-node-healing.service`** - dropped the "watching
