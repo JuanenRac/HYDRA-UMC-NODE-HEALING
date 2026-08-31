@@ -97,7 +97,7 @@ enough yet to warrant their own folders.
 
 ---
 
-## 🔧 BUILD & RUN
+## 🔧 BUILD & RUN GUIDE
 
 A real watchdog, not just a skeleton that compiles: it dials every node in
 `nodes.example.json` (or `-nodes <path>` to point at your own registry)
