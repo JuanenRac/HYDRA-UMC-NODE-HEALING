@@ -11,4 +11,4 @@
 package main
 
 // Version is the current release version of HYDRA-UMC-NODE-HEALING.
-const Version = "0.1.0"
+const Version = "0.1.1"

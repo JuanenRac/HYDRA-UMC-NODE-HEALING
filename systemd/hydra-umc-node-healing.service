@@ -3,14 +3,14 @@
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
 # GPL-3.0-or-later - see LICENSE
 # =============================================================================
-# /etc/hydra-umc-node-healing/nodes.json starts as a real, honest empty
-# registry ([]) - this repo's own nodes.example.json watches
-# HYDRA-UMC-ORCHESTRATOR/VISION-NODE/COGNITIVE-NODE's HealthService gRPC
-# endpoints, none of which run as real services on this CM5 yet (that's
-# real, separate future work - see this session's own audit). Watching
-# zero nodes is an honest starting state; add real entries as those nodes
-# come online rather than shipping a registry that would only ever report
-# every node unreachable.
+# Not started by install_node_healing.sh - config.LoadNodes() itself
+# refuses an empty registry ("is empty - nothing to watch"), and this
+# repo's own nodes.example.json watches HYDRA-UMC-ORCHESTRATOR/
+# VISION-NODE/COGNITIVE-NODE's HealthService gRPC endpoints, none of
+# which run as real services on this CM5 yet (real, separate future
+# work). Enable only once /etc/hydra-umc-node-healing/nodes.json has been
+# created with at least one real, reachable node - see that install
+# script's own printed instructions.
 #
 # This registry deliberately lives OUTSIDE the shared /etc/hydra-umc/
 # tree (0750 root:hydra-umc-agent) - this service's own unprivileged

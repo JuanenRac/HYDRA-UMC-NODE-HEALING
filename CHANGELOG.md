@@ -28,6 +28,22 @@ semantic-versioning judgment calls:
 
 ---
 
+## [0.1.1] - The 0.1.0 fix was still wrong: this binary refuses to run with zero nodes
+
+- **`systemd/hydra-umc-node-healing.service`** - dropped the "watching
+  zero nodes" framing entirely. Live-verified on the real CM5: `config.
+  LoadNodes()` itself refuses an empty registry ("is empty - nothing to
+  watch") and exits 1, so 0.1.0's `nodes.json` = `[]` auto-restart-looped
+  exactly like the permission bug it was meant to fix, just with a
+  different error. There is genuinely no real HealthService-speaking
+  node anywhere in this ecosystem yet (this repo's own
+  `nodes.example.json` targets 3 services that don't run one), so this
+  binary correctly has nothing it can watch today. `HYDRA-UMC-OS`'s
+  `install_node_healing.sh` now installs the capability only (binary +
+  unit, matching `install_vision_streamer.sh`'s own pattern) and does
+  NOT create a registry or enable/start the service - see that script's
+  own printed instructions for what to do once a real node exists.
+
 ## [0.1.0] - Real bug found on this device's first live install: the node registry lived somewhere this service couldn't read
 
 - **`systemd/hydra-umc-node-healing.service`** - the node registry path
