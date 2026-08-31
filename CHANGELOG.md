@@ -28,6 +28,19 @@ semantic-versioning judgment calls:
 
 ---
 
+## [0.0.9] - Real CM5 deployment
+
+- **`systemd/hydra-umc-node-healing.service`** (new) - unit for
+  `HYDRA-UMC-OS/provisioning/install_node_healing.sh` (new, that repo),
+  which builds this pure-Go binary on-device. Starts watching an
+  intentionally EMPTY node registry (`/etc/hydra-umc/node-healing/nodes.json`
+  = `[]`), not this repo's own `nodes.example.json` - that file lists
+  HealthService gRPC endpoints for HYDRA-UMC-ORCHESTRATOR/VISION-NODE/
+  COGNITIVE-NODE, none of which run as real services on this CM5 yet
+  (real, separate future work). Watching zero nodes is an honest starting
+  state; add real entries by hand as those nodes come online, rather than
+  shipping a registry that would only ever report every node unreachable.
+
 ## [0.0.8] - New docs/ reference set
 
 - **`docs/ARCHITECTURE.md`, `docs/BUILD_AND_RUN.md`,
