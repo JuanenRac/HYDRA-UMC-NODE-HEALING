@@ -28,6 +28,22 @@ semantic-versioning judgment calls:
 
 ---
 
+## [0.1.0] - Real bug found on this device's first live install: the node registry lived somewhere this service couldn't read
+
+- **`systemd/hydra-umc-node-healing.service`** - the node registry path
+  moves from `/etc/hydra-umc/node-healing/nodes.json` to
+  `/etc/hydra-umc-node-healing/nodes.json`. Live-verified failure on the
+  real CM5 this was first installed on: `/etc/hydra-umc/` is `0750
+  root:hydra-umc-agent` (see `install_local_agent.sh` in HYDRA-UMC-OS),
+  and this service's own unprivileged systemd account is in neither, so
+  it could never traverse into that directory to open its own `--nodes`
+  file - `permission denied` on every start, `systemd` auto-restart-
+  looping forever. A plain `os.Open()` by this process is not the same
+  as a `systemd` `EnvironmentFile=` directive (read by `systemd` itself,
+  as root, before it drops privileges) - other services under
+  `/etc/hydra-umc/` get away with the shared tree only because they never
+  open a file under it themselves.
+
 ## [0.0.9] - Real CM5 deployment
 
 - **`systemd/hydra-umc-node-healing.service`** (new) - unit for

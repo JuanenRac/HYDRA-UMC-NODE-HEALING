@@ -3,7 +3,7 @@
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
 # GPL-3.0-or-later - see LICENSE
 # =============================================================================
-# /etc/hydra-umc/node-healing/nodes.json starts as a real, honest empty
+# /etc/hydra-umc-node-healing/nodes.json starts as a real, honest empty
 # registry ([]) - this repo's own nodes.example.json watches
 # HYDRA-UMC-ORCHESTRATOR/VISION-NODE/COGNITIVE-NODE's HealthService gRPC
 # endpoints, none of which run as real services on this CM5 yet (that's
@@ -11,6 +11,13 @@
 # zero nodes is an honest starting state; add real entries as those nodes
 # come online rather than shipping a registry that would only ever report
 # every node unreachable.
+#
+# This registry deliberately lives OUTSIDE the shared /etc/hydra-umc/
+# tree (0750 root:hydra-umc-agent) - this service's own unprivileged
+# account cannot traverse into that directory to open a config file
+# itself (unlike an EnvironmentFile=, which systemd reads as root before
+# dropping privileges) - real bug found live on this device's first
+# install.
 [Unit]
 Description=HYDRA-UMC-NODE-HEALING real HydraNode watchdog
 After=network-online.target
@@ -21,7 +28,7 @@ Type=simple
 User=hydra-umc-node-healing
 Group=hydra-umc-node-healing
 WorkingDirectory=/opt/hydra-umc/node-healing
-ExecStart=/opt/hydra-umc/node-healing/hydra-umc-node-healing --nodes /etc/hydra-umc/node-healing/nodes.json
+ExecStart=/opt/hydra-umc/node-healing/hydra-umc-node-healing --nodes /etc/hydra-umc-node-healing/nodes.json
 Restart=on-failure
 RestartSec=5
 NoNewPrivileges=true
