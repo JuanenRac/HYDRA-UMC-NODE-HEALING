@@ -98,7 +98,7 @@ utilitaires encore suffisant pour justifier leurs propres dossiers.
 
 ---
 
-## 🔧 BUILD & RUN
+## 🔧 BUILD ET EXÉCUTION
 
 Un vrai watchdog, pas seulement un squelette qui compile : il contacte
 chaque nœud de `nodes.example.json` (ou `-nodes <chemin>` pour pointer
@@ -141,7 +141,7 @@ go test ./...   # src/config + src/watchdog, allers-retours gRPC
 
 ---
 
-## 🚀 ROADMAP
+## 🚀 FEUILLE DE ROUTE
 * **Phase 1 :** Synchronisation du jumeau numérique avec la télémétrie matérielle en temps réel et latence inférieure à 10 ms.
 * **Phase 2 :** Intégration de Physics Replica avec des simulateurs de classe industrielle (Isaac Sim) et prise en charge des corps déformables.
 * **Phase 3 :** Modèles de récupération automatisés de Node Healing pour un basculement décentralisé et détection précoce de la dégradation des capteurs.

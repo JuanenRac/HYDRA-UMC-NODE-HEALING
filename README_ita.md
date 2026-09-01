@@ -98,7 +98,7 @@ ancora sufficiente da giustificare cartelle proprie.
 
 ---
 
-## 🔧 BUILD & RUN
+## 🔧 BUILD ED ESECUZIONE
 
 Un watchdog reale, non solo uno scheletro che compila: contatta ogni nodo
 in `nodes.example.json` (o `-nodes <percorso>` per puntare a un proprio
@@ -139,7 +139,7 @@ go test ./...   # src/config + src/watchdog, round-trip gRPC
 
 ---
 
-## 🚀 ROADMAP
+## 🚀 TABELLA DI MARCIA
 * **Fase 1:** Sincronizzazione del Digital Twin con telemetria hardware in tempo reale e latenza inferiore a 10 ms.
 * **Fase 2:** Integrazione di Physics Replica con simulatori di livello industriale (Isaac Sim) e supporto per corpi deformabili.
 * **Fase 3:** Modelli di ripristino automatizzati di Node Healing per failover decentralizzato e rilevamento precoce del degrado dei sensori.

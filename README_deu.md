@@ -98,7 +98,7 @@ der eigene Ordner bislang rechtfertigen würde.
 
 ---
 
-## 🔧 BUILD & RUN
+## 🔧 BUILD UND AUSFÜHRUNG
 
 Ein echter Watchdog, nicht nur ein Skelett, das kompiliert: er wählt jeden
 Knoten aus `nodes.example.json` (oder `-nodes <Pfad>` für ein eigenes
@@ -140,7 +140,7 @@ go test ./...   # src/config + src/watchdog, echte gRPC-Roundtrips
 
 ---
 
-## 🚀 ROADMAP
+## 🚀 FAHRPLAN
 * **Phase 1:** Digital-Twin-Synchronisation mit Echtzeit-Hardware-Telemetrie und Sub-10ms-Latenz.
 * **Phase 2:** Physics Replica-Integration mit industriellen Simulatoren (Isaac Sim) und Unterstützung für verformbare Körper.
 * **Phase 3:** Automatisierte Wiederherstellungsmuster von Node Healing für dezentrales Failover und frühzeitige Erkennung von Sensordegradation.
