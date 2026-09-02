@@ -77,6 +77,9 @@ HYDRA-UMC-NODE-HEALING/
 │   │                  # (RetryPolicy)
 │   └── config/        # 静的 JSON ノードレジストリのローダー
 ├── build/             # コンパイル済みバイナリ(build.sh/build.bat の出力)
+├── images/            # メディアと図版
+├── systemd/
+│   └── hydra-umc-node-healing.service # CM5 上のローカルウォッチドッグ用 systemd ユニット
 ├── tools/
 │   ├── build_test.py  # バージョンを増やさないビルドチェック
 │   └── ci_validate.py # CI が使用するマニフェスト/CHANGELOG/ドキュメント検証
@@ -85,6 +88,7 @@ HYDRA-UMC-NODE-HEALING/
 ├── version.go         # const Version = "X.Y.Z"(go.mod にはアプリバージョンフィールドがありません)
 ├── main.go            # エントリポイント：レジストリを読み込みウォッチドッグを起動
 ├── bump_version.py    # オドメーター式バージョンインクリメント、build.sh/.bat が実行
+├── bump_manifest_version.py # hydra-umc.project.json のバージョンをネイティブ側と同期（--sync）
 ├── build.sh/.bat      # バージョンを増加させ、その後 `go build` を実行
 ├── build-test.sh/.bat # バージョンを増やさないビルドチェック
 ├── run.sh/.bat        # コンパイル済みバイナリを実行

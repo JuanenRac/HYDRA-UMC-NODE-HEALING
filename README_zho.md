@@ -74,6 +74,9 @@ HYDRA-UMC-NODE-HEALING/
 │   │                  # retry.go（RetryPolicy）
 │   └── config/        # 静态 JSON 节点注册表加载器
 ├── build/             # 编译后的二进制文件（build.sh/build.bat 的输出）
+├── images/            # 媒体与图示
+├── systemd/
+│   └── hydra-umc-node-healing.service # CM5 本地看门狗的 systemd 单元
 ├── tools/
 │   ├── build_test.py  # 不递增版本号的构建检查
 │   └── ci_validate.py # CI 使用的清单/CHANGELOG/文档校验
@@ -82,6 +85,7 @@ HYDRA-UMC-NODE-HEALING/
 ├── version.go         # const Version = "X.Y.Z"（go.mod 没有应用版本字段）
 ├── main.go            # 入口点：加载注册表并启动看门狗
 ├── bump_version.py    # 里程表式版本递增，由 build.sh/.bat 运行
+├── bump_manifest_version.py # 将 hydra-umc.project.json 的版本与原生版本同步（--sync）
 ├── build.sh/.bat      # 递增版本号，然后执行 `go build`
 ├── build-test.sh/.bat # 不递增版本号的构建检查
 ├── run.sh/.bat        # 运行编译后的二进制文件

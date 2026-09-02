@@ -72,6 +72,9 @@ HYDRA-UMC-NODE-HEALING/
 │   │                  # retry.go (RetryPolicy)
 │   └── config/        # Caricatore del registro statico dei nodi (JSON)
 ├── build/             # Binari compilati (output di build.sh/build.bat)
+├── images/            # Media e diagrammi
+├── systemd/
+│   └── hydra-umc-node-healing.service # Unità systemd del watchdog sulla CM5 locale
 ├── tools/
 │   ├── build_test.py  # Controllo build senza versionamento
 │   └── ci_validate.py # Validazione manifest/CHANGELOG/docs usata dalla CI
@@ -80,6 +83,7 @@ HYDRA-UMC-NODE-HEALING/
 ├── version.go         # const Version = "X.Y.Z" (go.mod non ha questo campo)
 ├── main.go            # Punto di ingresso: carica il registro e avvia il watchdog
 ├── bump_version.py    # Bump di versione stile contachilometri
+├── bump_manifest_version.py # Sincronizza la versione di hydra-umc.project.json con quella nativa (--sync)
 ├── build.sh/.bat      # Aggiorna la versione, poi `go build`
 ├── build-test.sh/.bat # Controllo build senza versionamento
 ├── run.sh/.bat        # Esegue il binario compilato
