@@ -20,14 +20,6 @@ semantic-versioning judgment calls:
 
 ---
 
-## Unreleased - overflow-safe retry backoff
-
-- Retry backoff now caps before a duration doubling could overflow. Extreme
-  but valid retry-policy bounds remain finite and cannot become a negative
-  delay that alters watchdog retry behaviour.
-
----
-
 ## [0.1.2] - Real recovery wiring to HYDRA-UMC-ORCHESTRATOR
 
 - **`src/watchdog/orchestrator_reactor.go`** (new) - `OrchestratorReactor`
@@ -47,7 +39,7 @@ semantic-versioning judgment calls:
 - **`main.go`** - new `--orchestrator-url` flag; omitted, behavior is
   unchanged from before this existed (`LogReactor`, detection-only).
 - 6 new tests (`src/watchdog/orchestrator_reactor_test.go`, real HTTP
-  against `httptest.NewServer`) - 24 total.
+  against `httptest.NewServer`) - 28 total.
 
 ## [0.1.1] - The 0.1.0 fix was still wrong: this binary refuses to run with zero nodes
 
@@ -83,6 +75,11 @@ semantic-versioning judgment calls:
 
 ## [0.0.9] - Real CM5 deployment
 
+- **`src/watchdog/retry.go`** - retry backoff now caps before a duration
+  doubling could overflow. Extreme but valid retry-policy bounds remain
+  finite and cannot become a negative delay that alters watchdog retry
+  behaviour. Landed just ahead of this build, so it ships as part of
+  0.0.9 rather than its own version bump.
 - **`systemd/hydra-umc-node-healing.service`** (new) - unit for
   `HYDRA-UMC-OS/provisioning/install_node_healing.sh` (new, that repo),
   which builds this pure-Go binary on-device. Starts watching an

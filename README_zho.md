@@ -58,6 +58,8 @@ flowchart TB
 * **为何传输失败会被重试（限次），但身份不匹配永远不会。** 连接被拒绝或 RPC 超时可能是真正短暂的故障——一个正在重启的节点、一次短暂的网络卡顿——所以 `checkNode` 会用指数退避重试最多 `RetryPolicy.MaxAttempts` 次才放弃。一个应答了但报告错误名称（或根本没报告）的节点则是完全不同性质的问题：无论等多久都修复不了一个绑在错误端口上的服务，所以这种情况会立即被分类为 `StatusInvalid`，不做任何重试。
 * **为何退避没有随机抖动（jitter）。** 一支真正的生产集群会想要抖动，以避免大量连接同时涌回造成的"惊群"效应，但这个看门狗本来就是每个节点各自用自己的 goroutine、按自己的节奏轮询——这里加入抖动唯一的代价就是让 `RetryPolicy.Backoff()` 变得不确定，更难在测试里断言。如果/当这个看门狗有朝一日需要对着数百个节点、共享同一个存在瓶颈的资源做轮询时，再加入抖动。
 
+更多细节参见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)(架构指南)、[`docs/BUILD_AND_RUN.md`](docs/BUILD_AND_RUN.md)(发布构建与测试构建流程)以及 [`docs/INTEGRATION_CONTRACT.md`](docs/INTEGRATION_CONTRACT.md)(未来适配器必须遵循的带版本号健康快照契约)。
+
 ---
 
 ## 📂 目录结构
