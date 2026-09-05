@@ -25,7 +25,16 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 )
+
+// defaultRecoveryTimeout bounds the recovery POST below when no Client is
+// given. Found in an ecosystem-wide software-improvements audit:
+// http.DefaultClient has no timeout at all, so if Orchestrator itself is
+// hung - the most likely scenario during a real incident - this call could
+// block forever per unhealthy-node transition, leaking a goroutine exactly
+// when the system is most compromised.
+const defaultRecoveryTimeout = 5 * time.Second
 
 // OrchestratorReactor wraps LogReactor's own real logging (an operator
 // must still see every transition via journalctl regardless of whether
@@ -36,7 +45,8 @@ type OrchestratorReactor struct {
 	// BaseURL is Orchestrator's own HTTP API base, e.g.
 	// "http://127.0.0.1:8114" - no trailing slash required.
 	BaseURL string
-	// Client defaults to http.DefaultClient - overridable for tests.
+	// Client defaults to a client bounded by defaultRecoveryTimeout, not
+	// http.DefaultClient (which has no timeout) - overridable for tests.
 	Client *http.Client
 	// Printf defaults to fmt.Printf, same as LogReactor's own default.
 	Printf func(format string, args ...any)
@@ -62,7 +72,7 @@ func (r OrchestratorReactor) OnTransition(node Node, from, to Status, detail str
 
 	client := r.Client
 	if client == nil {
-		client = http.DefaultClient
+		client = &http.Client{Timeout: defaultRecoveryTimeout}
 	}
 	url := fmt.Sprintf("%s/nodes/%s/recover", strings.TrimSuffix(r.BaseURL, "/"), node.Name)
 	resp, err := client.Post(url, "application/json", nil)

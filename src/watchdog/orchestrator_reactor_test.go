@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestOrchestratorReactor_UnreachableTriggersRecovery(t *testing.T) {
@@ -82,6 +83,37 @@ func TestOrchestratorReactor_SurvivesOrchestratorBeingUnreachable(t *testing.T) 
 	// Orchestrator being down. Must not panic.
 	reactor := OrchestratorReactor{BaseURL: "http://127.0.0.1:1", Printf: func(string, ...any) {}}
 	reactor.OnTransition(Node{Name: "node-a"}, StatusHealthy, StatusUnreachable, "dial timeout")
+}
+
+func TestOrchestratorReactor_DefaultClientHasARealTimeout(t *testing.T) {
+	// Found in an ecosystem-wide software-improvements audit:
+	// http.DefaultClient (the old default) has no timeout at all, so a
+	// hung Orchestrator - the most likely scenario during a real incident
+	// - could block this call forever. A server that never responds
+	// proves the default client itself now bounds the wait, without
+	// relying on an injected Client (which was already always safe).
+	// Sleeps well past the client's own timeout instead of blocking
+	// forever (select{}) - the handler goroutine eventually returns and
+	// lets the deferred server.Close() below complete, it just does so
+	// after the assertion already ran.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(defaultRecoveryTimeout * 3)
+	}))
+	defer server.Close()
+
+	reactor := OrchestratorReactor{BaseURL: server.URL, Printf: func(string, ...any) {}}
+
+	done := make(chan struct{})
+	go func() {
+		reactor.OnTransition(Node{Name: "node-a"}, StatusHealthy, StatusUnreachable, "dial timeout")
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(defaultRecoveryTimeout * 2):
+		t.Fatal("OnTransition did not return within the default client's own timeout - it is still blocking forever on a hung orchestrator")
+	}
 }
 
 func TestOrchestratorReactor_AlwaysLogsRegardlessOfRecoveryOutcome(t *testing.T) {

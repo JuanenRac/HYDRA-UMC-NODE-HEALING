@@ -1,6 +1,6 @@
 # Changelog
 
-All notable work on **HYDRA-UMC-NODE-HEALING** is summarized here, newest first. Full
+All notable work on **HYDRA-UMC-NODE-HEALING** is summarized here, newest first.
 This file intentionally omits calendar dates from individual entries.
 
 ## Versioning scheme
@@ -17,6 +17,18 @@ semantic-versioning judgment calls:
 - the same carry cascades into `MAJOR` if `MINOR` would exceed 9
 
 ---
+
+## [Unreleased] - a hung orchestrator can no longer block this watchdog forever
+
+- **`OrchestratorReactor`'s default HTTP client now has a real timeout**
+  (`defaultRecoveryTimeout`, 5s) - found in an ecosystem-wide
+  software-improvements audit: it used to fall back to
+  `http.DefaultClient`, which has no timeout at all. If Orchestrator
+  itself is hung - the most likely scenario during a real incident -
+  the recovery POST could block forever per unhealthy-node transition,
+  leaking a goroutine exactly when the system is most compromised. New
+  regression test proves a server that never responds no longer blocks
+  `OnTransition` past the default timeout.
 
 ## [0.1.2] - Real recovery wiring to HYDRA-UMC-ORCHESTRATOR
 
