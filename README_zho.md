@@ -52,9 +52,9 @@ flowchart TB
 
 * **为何真正的逻辑位于 `src/` 之下，而非仓库根目录。** `src/healthpb`（生成的 gRPC 存根）、`src/watchdog`（轮询引擎）和 `src/config`（节点注册表加载器）包含实际的实现；`main.go`/`version.go` 仍留在仓库根目录，作为将它们连接在一起的入口点。
 * **为何检测机制与其所保护的编排器相互独立。** 如果一个节点自愈看门狗运行在编排器进程*内部*，它就无法检测到该进程自身发生挂起——作为独立服务运行，才能真正实现"检测无响应节点并重新路由其工作"这一目标，即使无响应的节点正是编排器本身。
-* **为何检测机制今天已经真实可用，而故障转移/软重启尚未实现。** `src/watchdog` 会对每个已注册的节点真实调用 `HealthService.Check()`（来自 `HYDRA-UMC-ORCHESTRATOR/proto/hydra_common.proto` 的共享 `hydra.common.v1` gRPC 契约），基于真实的时间间隔和真实的网络连接，将结果分类为 HEALTHY/DEGRADED/UNHEALTHY/UNREACHABLE 之一，并且只在状态*发生变化*时触发一次 `Reactor` 回调（绝不会每个轮询周期都触发）。它尚未调用 HYDRA-UMC-ORCHESTRATOR 来触发真正的故障转移或软重启，因为 ORCHESTRATOR 目前同样没有可供调用的相关 API——`watchdog.Reactor` 正是为此预留的接入点。检测功能不需要等到那一步才能成为真实功能。
+* **检测机制与真实的故障转移如今都已真实接通。** `src/watchdog` 会对每个已注册的节点真实调用 `HealthService.Check()`（来自 `HYDRA-UMC-ORCHESTRATOR/proto/hydra_common.proto` 的共享 `hydra.common.v1` gRPC 契约），基于真实的时间间隔和真实的网络连接，将结果分类为 HEALTHY/DEGRADED/UNHEALTHY/UNREACHABLE 之一，并且只在状态*发生变化*时触发一次 `Reactor` 回调（绝不会每个轮询周期都触发）。`OrchestratorReactor`（`src/watchdog/orchestrator_reactor.go`）是生产环境中实际使用的真实 `Reactor` 实现：每当某个节点转入不健康状态，它就会调用 HYDRA-UMC-ORCHESTRATOR 自身真实的 `POST /nodes/:node/recover`，请求一次真正的恢复操作，而不只是记录检测结果。
 * **为何节点注册表是静态 JSON 而非对 HYDRA-UMC-SWARM-SYNC 的实时查询。** SWARM-SYNC（README 最初所称"整个蜂群中每个单元"的真相来源）目前同样没有真实 API——它仍处于脚手架阶段。一个静态的 `nodes.json`（见 `nodes.example.json`）才是诚实的 v0 版本，而不是一个假装动态的占位符。一旦 SWARM-SYNC 项目具备真实客户端，即可替换 `src/config.LoadNodes`。
-* **这如何融入生态系统的其余部分。** 作为 HYDRA-UMC-ORCHESTRATOR 下的同级服务——监视其注册表中的每个节点并报告状态变化；将工作从停止响应的节点重新路由出去是构建于此之上的下一层，待 ORCHESTRATOR 提供可供路由工作的接口后实现。
+* **这如何融入生态系统的其余部分。** 作为 HYDRA-UMC-ORCHESTRATOR 下的同级服务——监视其注册表中的每个节点，报告状态变化，并在某个节点变为不健康时通过 `OrchestratorReactor` 请求真正的恢复；将该节点上实际进行中的工作重新路由出去，是构建于此之上的下一层。
 * **为何传输失败会被重试（限次），但身份不匹配永远不会。** 连接被拒绝或 RPC 超时可能是真正短暂的故障——一个正在重启的节点、一次短暂的网络卡顿——所以 `checkNode` 会用指数退避重试最多 `RetryPolicy.MaxAttempts` 次才放弃。一个应答了但报告错误名称（或根本没报告）的节点则是完全不同性质的问题：无论等多久都修复不了一个绑在错误端口上的服务，所以这种情况会立即被分类为 `StatusInvalid`，不做任何重试。
 * **为何退避没有随机抖动（jitter）。** 一支真正的生产集群会想要抖动，以避免大量连接同时涌回造成的"惊群"效应，但这个看门狗本来就是每个节点各自用自己的 goroutine、按自己的节奏轮询——这里加入抖动唯一的代价就是让 `RetryPolicy.Backoff()` 变得不确定，更难在测试里断言。如果/当这个看门狗有朝一日需要对着数百个节点、共享同一个存在瓶颈的资源做轮询时，再加入抖动。
 
