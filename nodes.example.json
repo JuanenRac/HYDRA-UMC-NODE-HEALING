@@ -1,0 +1,5 @@
+[
+  { "name": "HYDRA-UMC-ORCHESTRATOR", "address": "127.0.0.1:50100" },
+  { "name": "HYDRA-UMC-VISION-NODE",  "address": "127.0.0.1:50101" },
+  { "name": "HYDRA-UMC-COGNITIVE-NODE", "address": "127.0.0.1:50102" }
+]

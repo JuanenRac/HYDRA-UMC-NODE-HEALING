@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "ecosystem": "HYDRA-UMC",
+  "name": "HYDRA-UMC-NODE-HEALING",
+  "version": "0.1.3",
+  "role": "service",
+  "stack": "go",
+  "technologies": [
+    "Go",
+    "gRPC health checks"
+  ],
+  "deployment_target": "cm5",
+  "maturity": "established",
+  "family": "Orchestration & Swarm",
+  "parent": "HYDRA-UMC-ORCHESTRATOR",
+  "build": "go build ./...",
+  "notes": "Established v0: real gRPC-based health watchdog with real failover wired in - OrchestratorReactor (watchdog.Reactor's real implementation) calls HYDRA-UMC-ORCHESTRATOR's own POST /nodes/:node/recover on every unhealthy transition. checkNode retries a transport-level failure (dial/RPC error) via a bounded, deterministic RetryPolicy (default 3 attempts, exponential backoff 250ms->2s cap) before classifying a node UNREACHABLE, masking transient network blips without an open-ended retry loop. A node that answers but misreports its own identity (missing or mismatched NodeIdentity.Name) is classified StatusInvalid and never trusted or retried - retrying cannot fix a node lying about its own name. 28 tests.",
+  "native_version": {
+    "file": "version.go",
+    "pattern": "Version\\s*=\\s*\"(\\d+)\\.(\\d+)\\.(\\d+)\""
+  }
+}
