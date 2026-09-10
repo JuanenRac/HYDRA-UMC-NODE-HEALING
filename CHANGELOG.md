@@ -20,7 +20,7 @@ semantic-versioning judgment calls:
 
 ## [0.1.3] - HEAL-01: a bounded background retry when Orchestrator is briefly down
 
-- **HEAL-01 (found in an ecosystem-wide software-improvements audit, P1):**
+- **HEAL-01 (P1):**
   a recovery request was tried exactly once, at the moment of the
   transition - if Orchestrator itself happened to be unreachable at that
   exact instant and the node then just stayed down (no FURTHER transition,
@@ -42,8 +42,7 @@ semantic-versioning judgment calls:
   and a newer transition superseding an older pending one. `go test
   -mod=readonly ./...`: all passing.
 - **`OrchestratorReactor`'s default HTTP client now has a real timeout**
-  (`defaultRecoveryTimeout`, 5s) - found in an ecosystem-wide
-  software-improvements audit: it used to fall back to
+  (`defaultRecoveryTimeout`, 5s) - it used to fall back to
   `http.DefaultClient`, which has no timeout at all. If Orchestrator
   itself is hung - the most likely scenario during a real incident -
   the recovery POST could block forever per unhealthy-node transition,
@@ -139,7 +138,7 @@ semantic-versioning judgment calls:
 
 ## [0.0.7] - `LoadNodes` rejects a duplicate node `name`
 
-- **`src/config/config.go`** - found in a live ecosystem bug audit: `LoadNodes` validated an empty `name` and an empty `address` per entry but never checked a `name` against the other entries in the same registry. `Watchdog.state` (`src/watchdog/watchdog.go`) is keyed by `Node.Name` alone, so two registry entries sharing a `name` with different `address` values (a realistic copy-paste mistake when adding another instance of a node) would silently share one map slot - whichever node polled last would overwrite the other's classification, and a real failure could end up masked behind the other node's healthy status. `LoadNodes` now tracks every `name` it has already accepted and returns an error naming both the offending entry's index and the earlier entry it duplicates as soon as a repeat is seen, instead of building a registry that two different nodes silently fight over.
+- **`src/config/config.go`** - `LoadNodes` validated an empty `name` and an empty `address` per entry but never checked a `name` against the other entries in the same registry. `Watchdog.state` (`src/watchdog/watchdog.go`) is keyed by `Node.Name` alone, so two registry entries sharing a `name` with different `address` values (a realistic copy-paste mistake when adding another instance of a node) would silently share one map slot - whichever node polled last would overwrite the other's classification, and a real failure could end up masked behind the other node's healthy status. `LoadNodes` now tracks every `name` it has already accepted and returns an error naming both the offending entry's index and the earlier entry it duplicates as soon as a repeat is seen, instead of building a registry that two different nodes silently fight over.
 - New `TestLoadNodes_DuplicateName` in `src/config/config_test.go` builds a two-entry registry that shares a `name` with different `address` values and asserts `LoadNodes` returns a non-nil error naming the duplicated `name`. All existing `config` and `watchdog` tests pass unchanged (18 tests total).
 
 ## [0.0.6] - Real v0: bounded retry policy + rejection of an unverifiable node identity
