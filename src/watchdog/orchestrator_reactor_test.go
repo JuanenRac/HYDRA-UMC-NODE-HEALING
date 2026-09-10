@@ -94,7 +94,6 @@ func TestOrchestratorReactor_SurvivesOrchestratorBeingUnreachable(t *testing.T) 
 }
 
 func TestOrchestratorReactor_DefaultClientHasARealTimeout(t *testing.T) {
-	// Found in an ecosystem-wide software-improvements audit:
 	// http.DefaultClient (the old default) has no timeout at all, so a
 	// hung Orchestrator - the most likely scenario during a real incident
 	// - could block this call forever. A server that never responds
@@ -137,7 +136,7 @@ func TestOrchestratorReactor_AlwaysLogsRegardlessOfRecoveryOutcome(t *testing.T)
 	}
 }
 
-// HEAL-01 (found in an ecosystem-wide software-improvements audit, P1):
+// HEAL-01 (P1):
 // the real scenario from the finding - Orchestrator is unreachable at the
 // exact moment of the transition, and the node itself never transitions
 // again (it just stays down). Before the fix, nothing ever retried once

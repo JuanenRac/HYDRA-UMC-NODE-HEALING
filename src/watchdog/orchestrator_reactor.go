@@ -31,8 +31,7 @@ import (
 )
 
 // defaultRecoveryTimeout bounds the recovery POST below when no Client is
-// given. Found in an ecosystem-wide software-improvements audit:
-// http.DefaultClient has no timeout at all, so if Orchestrator itself is
+// given. http.DefaultClient has no timeout at all, so if Orchestrator itself is
 // hung - the most likely scenario during a real incident - this call could
 // block forever per unhealthy-node transition, leaking a goroutine exactly
 // when the system is most compromised.
@@ -55,7 +54,7 @@ func DefaultRecoveryRetryPolicy() RetryPolicy {
 // HYDRA-UMC-ORCHESTRATOR for the two classifications that mean a node's
 // in-flight work needs to be requeued elsewhere.
 //
-// HEAL-01 (found in an ecosystem-wide software-improvements audit, P1):
+// HEAL-01 (P1):
 // the recovery request used to be tried exactly once, at the moment of
 // the transition, with no follow-up - if Orchestrator itself happened to
 // be unreachable at that exact instant and the node then just stayed
