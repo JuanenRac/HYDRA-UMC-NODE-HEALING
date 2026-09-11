@@ -16,6 +16,10 @@
 
 ---
 
+**Ehrlichkeitscheck - was heute wirklich läuft:** die Polling-/Klassifizierungsschleife (`src/watchdog/watchdog.go`), die begrenzte Retry-Richtlinie (`src/watchdog/retry.go`), die echte Verdrahtung der Wiederherstellungsanfrage an HYDRA-UMC-ORCHESTRATOR (`src/watchdog/orchestrator_reactor.go`) und der statische Node-Registry-Loader (`src/config/config.go`) sind alle real und getestet (32 bestandene Tests über `src/config` und `src/watchdog`) - und das sind echte gRPC-Roundtrips über echte Loopback-Sockets, kein simulierter Client. Was eine bekannte, dokumentierte Lücke ist: die Node-Registry ist eine statische JSON-Datei (`nodes.json`), keine Live-Abfrage an HYDRA-UMC-SWARM-SYNC, weil auch dieses Projekt noch keine echte API dafür hat - das ist die ehrliche v0, kein Platzhalter, der Dynamik vortäuscht. Auch das Umleiten der tatsächlich laufenden Missionsarbeit weg von einem ausgefallenen Knoten ist nicht die Aufgabe dieses Repositories - es fordert Wiederherstellung über `OrchestratorReactor` an und hört dort auf; die nächste Schicht (Jobs tatsächlich verschieben) liegt anderswo. Die 4 Roadmap-Phasen (Digital-Twin-Synchronisation, Isaac-Sim-Physikintegration, automatisierte Wiederherstellungsmuster, KI-gestützte prädiktive Heilung) sind angestrebte Zukunftsarbeit ohne jeglichen Code dahinter bisher. Siehe `CHANGELOG.md` für das, was bisher genau ausgeliefert wurde.
+
+---
+
 ## 1. 🛠️ TECHNISCHER ÜBERBLICK
 
 **HYDRA-UMC-NODE-HEALING** ist die Resilienz-Schicht des Schwarms. Er überwacht kontinuierlich den Zustand aller physischen HydraNodes (Controller) und logischen Dienste und gewährleistet so eine Null-Ausfallzeit in der Micro-Factory.

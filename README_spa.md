@@ -16,6 +16,10 @@
 
 ---
 
+**Comprobación de honestidad - qué funciona realmente hoy:** el bucle de sondeo/clasificación (`src/watchdog/watchdog.go`), la política de reintento acotado (`src/watchdog/retry.go`), el cableado real de solicitud de recuperación a HYDRA-UMC-ORCHESTRATOR (`src/watchdog/orchestrator_reactor.go`), y el cargador estático del registro de nodos (`src/config/config.go`) son todos reales y están testeados (32 tests pasando entre `src/config` y `src/watchdog`) - y son round-trips gRPC reales sobre sockets loopback reales, no un cliente simulado. Lo que es una brecha conocida y documentada: el registro de nodos es un archivo JSON estático (`nodes.json`), no una consulta en vivo a HYDRA-UMC-SWARM-SYNC, porque ese proyecto tampoco tiene todavía una API real que consultar - esta es la v0 honesta, no un placeholder que finge ser dinámico. Redirigir el trabajo de misión en curso lejos de un nodo caído tampoco es tarea de este repositorio - solicita recuperación a través de `OrchestratorReactor` y se detiene ahí; la siguiente capa (mover realmente los trabajos) vive en otro lugar. Las 4 fases del roadmap (sincronización de gemelo digital, integración de física Isaac Sim, patrones de recuperación automatizada, curación predictiva basada en IA) son trabajo futuro aspiracional sin ningún código detrás todavía. Ver `CHANGELOG.md` para lo que se ha entregado exactamente hasta ahora.
+
+---
+
 ## 1. 🛠️ VISIÓN GENERAL TÉCNICA
 
 **HYDRA-UMC-NODE-HEALING** es la capa de resiliencia del enjambre. Monitoriza continuamente la salud de todos los HydraNodes físicos (Controladores) y servicios lógicos, asegurando un tiempo de inactividad cero en la micro-fábrica.

@@ -49,6 +49,14 @@ semantic-versioning judgment calls:
   leaking a goroutine exactly when the system is most compromised. New
   regression test proves a server that never responds no longer blocks
   `OnTransition` past the default timeout.
+- Added a "Honesty check" paragraph right after the badges in
+  `README.md` and all 6 translated READMEs, naming the real modules
+  (`src/watchdog/watchdog.go`, `src/watchdog/retry.go`,
+  `src/watchdog/orchestrator_reactor.go`, `src/config/config.go`) and
+  the real test count (32 passing, real gRPC round-trips over real
+  loopback sockets). States plainly that the node registry is a static
+  JSON file, not a live HYDRA-UMC-SWARM-SYNC query, since that project
+  has no real API yet either. Docs-only, no version bump.
 
 ## [0.1.2] - Real recovery wiring to HYDRA-UMC-ORCHESTRATOR
 
