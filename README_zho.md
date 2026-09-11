@@ -16,6 +16,10 @@
 
 ---
 
+**诚实核查 - 今天真正能运行的部分：** 轮询/分类循环(`src/watchdog/watchdog.go`)、有限重试策略(`src/watchdog/retry.go`)、连接到 HYDRA-UMC-ORCHESTRATOR 的真实恢复请求线路(`src/watchdog/orchestrator_reactor.go`),以及静态节点注册表加载器(`src/config/config.go`)都是真实的并经过测试(`src/config` 和 `src/watchdog` 共 32 个测试通过)——而且这些都是真实回环套接字上的真实 gRPC 往返调用，而非模拟客户端。一个已知且已记录的差距：节点注册表是一个静态 JSON 文件(`nodes.json`),而不是对 HYDRA-UMC-SWARM-SYNC 的实时查询，因为那个项目本身也还没有可供查询的真实 API——这是诚实的 v0 版本，而不是假装动态的占位符。将真正在途的任务工作从故障节点重新分配出去，同样不是本仓库的职责——它只通过 `OrchestratorReactor` 请求恢复，到此为止；再往上的一层(真正搬运任务)存在于别处。路线图中的 4 个阶段(数字孪生同步、Isaac Sim 物理集成、自动化恢复模式、AI 驱动的预测性自愈)都是尚无任何代码支撑的愿景性未来工作。具体已交付的内容请见 `CHANGELOG.md`。
+
+---
+
 ## 1. 🛠️ 技术概述
 
 **HYDRA-UMC-NODE-HEALING** 是集群的弹性层。它持续监控所有物理 HydraNode
