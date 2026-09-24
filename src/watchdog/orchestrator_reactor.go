@@ -37,7 +37,7 @@ import (
 // when the system is most compromised.
 const defaultRecoveryTimeout = 5 * time.Second
 
-// DefaultRecoveryRetryPolicy bounds HEAL-01's own background retry (see
+// DefaultRecoveryRetryPolicy bounds this project's own background retry (see
 // startBackgroundRetry): up to 5 attempts, starting at 2s and capped at
 // 30s, so a briefly-restarting Orchestrator is still reached without
 // hammering it, and a genuinely long-term outage stops retrying instead
@@ -54,7 +54,7 @@ func DefaultRecoveryRetryPolicy() RetryPolicy {
 // HYDRA-UMC-ORCHESTRATOR for the two classifications that mean a node's
 // in-flight work needs to be requeued elsewhere.
 //
-// HEAL-01 (P1):
+// (P1):
 // the recovery request used to be tried exactly once, at the moment of
 // the transition, with no follow-up - if Orchestrator itself happened to
 // be unreachable at that exact instant and the node then just stayed
@@ -148,7 +148,7 @@ func (r *OrchestratorReactor) attemptRecovery(node Node) bool {
 	return true
 }
 
-// startBackgroundRetry is HEAL-01's own fix: re-attempts recovery for
+// startBackgroundRetry is this project's own fix: re-attempts recovery for
 // node on a bounded, backed-off schedule (RecoveryRetryPolicy) instead of
 // giving up the instant the first attempt fails. Cancelled by a later
 // OnTransition call for the same node (see cancelPendingLocked) - either

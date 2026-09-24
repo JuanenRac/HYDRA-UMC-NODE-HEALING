@@ -18,9 +18,9 @@ semantic-versioning judgment calls:
 
 ---
 
-## [0.1.3] - HEAL-01: a bounded background retry when Orchestrator is briefly down
+## [0.1.3] - a bounded background retry when Orchestrator is briefly down
 
-- **HEAL-01 (P1):**
+- 
   a recovery request was tried exactly once, at the moment of the
   transition - if Orchestrator itself happened to be unreachable at that
   exact instant and the node then just stayed down (no FURTHER transition,
