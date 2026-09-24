@@ -18,6 +18,14 @@ semantic-versioning judgment calls:
 
 ---
 
+## [0.1.4] - Reversible-only repair plans
+
+- **`RunRepair` (`src/watchdog/repair.go`):** an automatic repair plan is refused whole, before
+  anything runs, if any step is not marked reversible or has no rollback. Before each step
+  the rollback decision is recorded; if a step fails, every step already applied is rolled
+  back newest first, and a rollback that itself fails is recorded without stopping the
+  others. Five new tests.
+
 ## [0.1.3] - a bounded background retry when Orchestrator is briefly down
 
 - 
