@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// fastRetryPolicy keeps HEAL-01's background-retry tests fast and
+// fastRetryPolicy keeps 's background-retry tests fast and
 // deterministic without waiting out DefaultRecoveryRetryPolicy's real
 // (multi-second) production backoff.
 func fastRetryPolicy() RetryPolicy {
@@ -136,7 +136,7 @@ func TestOrchestratorReactor_AlwaysLogsRegardlessOfRecoveryOutcome(t *testing.T)
 	}
 }
 
-// HEAL-01 (P1):
+// (P1):
 // the real scenario from the finding - Orchestrator is unreachable at the
 // exact moment of the transition, and the node itself never transitions
 // again (it just stays down). Before the fix, nothing ever retried once
