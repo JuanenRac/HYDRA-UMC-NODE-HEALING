@@ -4,7 +4,7 @@
 
 # 💊 HYDRA-UMC-NODE-HEALING
 
-<p align="center"><a href="README.md">🇺🇸 English</a> | <a href="README_spa.md">🇪🇸 Español</a> | <a href="README_fra.md">🇫🇷 Français</a> | <a href="README_ita.md">🇮🇹 Italiano</a> | <a href="README_deu.md">🇩🇪 Deutsch</a> | <a href="README_zho.md">🇨🇳 简体中文</a> | 🇯🇵 <b>日本語</b></p>
+<p align="center"><a href="README.md">🇺🇸 English</a> | <a href="README_spa.md">🇪🇸 Español</a> | <a href="README_fra.md">🇫🇷 Français</a> | <a href="README_ita.md">🇮🇹 Italiano</a> | <a href="README_deu.md">🇩🇪 Deutsch</a> | <a href="README_zho.md">🇨🇳 简体中文</a> | 🇯🇵 <b>日本語</b> | <a href="README_por.md">🇵🇹 Português</a></p>
 
 ### 🛡️ HydraNode 向け高可用性モニター & フェイルオーバーマネージャー
 
@@ -16,7 +16,7 @@
 
 ---
 
-**正直な現状確認 - 今日実際に動くもの:** ポーリング/分類ループ(`src/watchdog/watchdog.go`)、制限付きリトライポリシー(`src/watchdog/retry.go`)、HYDRA-UMC-ORCHESTRATOR への本物の復旧リクエスト配線(`src/watchdog/orchestrator_reactor.go`)、そして静的ノードレジストリのローダー(`src/config/config.go`)はすべて本物であり、テスト済みである(`src/config` と `src/watchdog` 全体で 32 件のテストが成功) - これらはモック化されたクライアントではなく、本物のループバックソケット上での本物の gRPC 往復通信である。既知かつ文書化されているギャップ: ノードレジストリは静的な JSON ファイル(`nodes.json`)であり、HYDRA-UMC-SWARM-SYNC へのライブクエリではない。なぜならそのプロジェクト自体にも、まだ問い合わせ可能な本物の API が存在しないからである - これは動的であるふりをしたプレースホルダーではなく、正直な v0 である。障害の発生したノードから実際に進行中のミッション作業をリルーティングすることも、このリポジトリの役割ではない - `OrchestratorReactor` を通じて復旧を要求するところで止まっており、その先の層(実際にジョブを移動させること)は別の場所にある。ロードマップの 4 つのフェーズ(デジタルツイン同期、Isaac Sim 物理統合、自動化された復旧パターン、AI 駆動の予測的自己修復)は、今のところ裏付けとなるコードが一切ない、将来に向けた願望である。これまでに何が実際に出荷されたかは `CHANGELOG.md` を参照。
+**正直な現状確認 - 今日実際に動くもの:** ポーリング/分類ループ(`src/watchdog/watchdog.go`)、制限付きリトライポリシー(`src/watchdog/retry.go`)、HYDRA-UMC-ORCHESTRATOR への本物の復旧リクエスト配線(`src/watchdog/orchestrator_reactor.go`)、そして静的ノードレジストリのローダー(`src/config/config.go`)はすべて本物であり、テスト済みである(`src/config` と `src/watchdog` 全体で 48 件のテストが成功) - これらはモック化されたクライアントではなく、本物のループバックソケット上での本物の gRPC 往復通信である。既知かつ文書化されているギャップ: ノードレジストリは静的な JSON ファイル(`nodes.json`)であり、HYDRA-UMC-SWARM-SYNC へのライブクエリではない。なぜならそのプロジェクト自体にも、まだ問い合わせ可能な本物の API が存在しないからである - これは動的であるふりをしたプレースホルダーではなく、正直な v0 である。障害の発生したノードから実際に進行中のミッション作業をリルーティングすることも、このリポジトリの役割ではない - `OrchestratorReactor` を通じて復旧を要求するところで止まっており、その先の層(実際にジョブを移動させること)は別の場所にある。ロードマップの 4 つのフェーズ(デジタルツイン同期、Isaac Sim 物理統合、自動化された復旧パターン、AI 駆動の予測的自己修復)は、今のところ裏付けとなるコードが一切ない、将来に向けた願望である。これまでに何が実際に出荷されたかは `CHANGELOG.md` を参照。
 
 ---
 
@@ -61,6 +61,7 @@ flowchart TB
 * **検知機能が、それが保護しているオーケストレーターから独立している理由。** オーケストレータープロセスの*内部*で実行されるノード自己修復ウォッチドッグは、そのプロセス自体がハングしたことを検知できません——独立したサービスとして実行することで、「応答しないノードを検知しその作業を再ルーティングする」ことが、応答しないノードがオーケストレーター自身である場合も含めて、実際に可能になります。
 * **検知機能と実際のフェイルオーバーの両方が、今はもう本物として接続されています。** `src/watchdog` は、登録済みの各ノードに対して実際の間隔・実際のネットワーク接続で `HealthService.Check()`(`HYDRA-UMC-ORCHESTRATOR/proto/hydra_common.proto` の共有 `hydra.common.v1` gRPC 契約)を呼び出し、結果を HEALTHY/DEGRADED/UNHEALTHY/UNREACHABLE のいずれかに分類し、状態が実際に*変化した*ときにのみ `Reactor` コールバックを発火します(毎ポーリング周期ではありません)。`OrchestratorReactor`(`src/watchdog/orchestrator_reactor.go`)は本番で実際に使われている `Reactor` の実装で、ノードが不健全な状態に遷移するたびに HYDRA-UMC-ORCHESTRATOR 自身の `POST /nodes/:node/recover` を呼び出し、検知結果を記録するだけでなく実際の復旧アクションを要求します。
 * **ノードレジストリが HYDRA-UMC-SWARM-SYNC へのライブクエリではなく静的な JSON である理由。** SWARM-SYNC(README がもともと「群れの全セル」の情報源として挙げていたもの)にも実際の API はまだありません——依然として足場(アンダミアヘ)段階です。静的な `nodes.json`(`nodes.example.json` を参照)は、動的であるふりをするプレースホルダーではなく、正直な v0 です。SWARM-SYNC プロジェクトに実際のクライアントができ次第、`src/config.LoadNodes` を置き換えてください。
+* 🩺 **実在するサービスを HTTP で監視し、トークンを送ります（v0）：** `nodes.json` のエントリは gRPC の `address` の代わりに `healthUrl`（`http://…` または `https://…`）を持てます。ウォッチドッグは `GET` を 1 回送り、応答を分類します — `2xx` は正常（JSON の `status` が `degraded`/`unhealthy` ならそれに従い、レジストリ名と異なる JSON の `name` は `INVALID`）、`5xx` は異常、応答なしは `UNREACHABLE`（再試行されます）、リダイレクトや `4xx` は `INVALID`（誤った URL や認証情報の不足はノードの故障ではなく設定の問題なので再試行されず、リダイレクトも決して追従しません）。これまでは、エコシステムのどのサービスも実装していない gRPC の `HealthService` で全ノードを監視していたため、完全に正常なサービスが `UNREACHABLE` と報告されていました。オーケストレーターへの復旧要求は、`-orchestrator-token` / `ORCHESTRATOR_TOKEN` が設定されていれば `Authorization: Bearer` を付けて送られ（ネットワークアドレス上のオーケストレーターは、そうでなければ拒否します）、ノード名は 1 つのパスセグメントとしてエスケープされます。*（実装済み）*
 * **エコシステムの他の部分との関係。** HYDRA-UMC-ORCHESTRATOR の下の兄弟サービスです——自身のレジストリ内の各ノードを監視し、状態変化を報告し、いずれかが不健全になると `OrchestratorReactor` を通じて実際の復旧を要求するようになりました。実際に進行中の作業をそのノードから再ルーティングする機能は、この上に構築される次の層です。
 * **トランスポート障害はリトライされる（上限付きで）が、識別情報の不一致は決してリトライされない理由。** 接続拒否や RPC タイムアウトは、再起動中のノードや一時的なネットワークの不調のような、本当に一過性の障害であることがあります——そのため `checkNode` は諦める前に `RetryPolicy.MaxAttempts` 回まで指数バックオフでリトライします。応答はするが誤った名前(またはまったく名前がない)を報告するノードはまったく別種の問題です——どれだけ待っても間違ったポートに束縛されたサービスは直りません。そのためこのケースは即座に、一切リトライすることなく `StatusInvalid` に分類されます。
 * **バックオフにランダムなジッターがない理由。** 実際の本番フリートであれば、同時再接続の「サンダリングハード」を避けるためにジッターが欲しくなるでしょうが、このウォッチドッグはすでに各ノードを独自の goroutine から独自のペースでポーリングしています——ここでジッターを追加すると唯一犠牲になるのは `RetryPolicy.Backoff()` が非決定的になり、テストでの検証が難しくなることです。このウォッチドッグがいつか共有のボトルネックリソースに対して数百のノードをポーリングするようになったら、ジッターを追加してください。

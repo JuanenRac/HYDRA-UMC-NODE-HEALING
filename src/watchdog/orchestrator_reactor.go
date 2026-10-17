@@ -25,6 +25,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -72,6 +73,10 @@ type OrchestratorReactor struct {
 	// Client defaults to a client bounded by defaultRecoveryTimeout, not
 	// http.DefaultClient (which has no timeout) - overridable for tests.
 	Client *http.Client
+	// Token, when set, is sent as "Authorization: Bearer <token>" - an
+	// orchestrator started with a token (or on a network address, where it
+	// must have one) answers 401 to a recovery request without it.
+	Token string
 	// Printf defaults to fmt.Printf, same as LogReactor's own default.
 	Printf func(format string, args ...any)
 	// RecoveryRetryPolicy bounds the background retry below - defaults to
@@ -133,8 +138,17 @@ func (r *OrchestratorReactor) attemptRecovery(node Node) bool {
 	if client == nil {
 		client = &http.Client{Timeout: defaultRecoveryTimeout}
 	}
-	url := fmt.Sprintf("%s/nodes/%s/recover", strings.TrimSuffix(r.BaseURL, "/"), node.Name)
-	resp, err := client.Post(url, "application/json", nil)
+	target := fmt.Sprintf("%s/nodes/%s/recover", strings.TrimSuffix(r.BaseURL, "/"), url.PathEscape(node.Name))
+	req, err := http.NewRequest(http.MethodPost, target, nil)
+	if err != nil {
+		r.printf("[node-healing] recovery request to orchestrator could not be built for %s: %v\n", node.Name, err)
+		return false
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if r.Token != "" {
+		req.Header.Set("Authorization", "Bearer "+r.Token)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		r.printf("[node-healing] recovery request to orchestrator failed for %s: %v\n", node.Name, err)
 		return false

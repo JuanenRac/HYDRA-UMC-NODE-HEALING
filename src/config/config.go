@@ -12,18 +12,23 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 
 	"github.com/JuanenRac/hydra-umc-node-healing/src/watchdog"
 )
 
 type nodeEntry struct {
-	Name    string `json:"name"`
-	Address string `json:"address"`
+	Name      string `json:"name"`
+	Address   string `json:"address"`
+	HealthURL string `json:"healthUrl"`
 }
 
 // LoadNodes reads a JSON array of {"name": "...", "address": "host:port"}
-// entries from path. Returns a clear error (not a panic) on a missing or
+// entries from path. An entry may carry "healthUrl" (an http:// or https://
+// URL answered with 2xx when the node is well) instead of "address": most
+// services here speak HTTP only, and a node with a healthUrl is probed over
+// HTTP instead of the gRPC HealthService. Returns a clear error (not a panic) on a missing or
 // malformed file, since a bad config here means the watchdog would
 // silently watch nothing - worth failing loudly on startup instead.
 func LoadNodes(path string) ([]watchdog.Node, error) {
@@ -44,8 +49,14 @@ func LoadNodes(path string) ([]watchdog.Node, error) {
 		if e.Name == "" {
 			return nil, fmt.Errorf("node registry %q: entry %d has no \"name\"", path, i)
 		}
-		if e.Address == "" {
-			return nil, fmt.Errorf("node registry %q: entry %d (%s) has no \"address\"", path, i, e.Name)
+		if e.Address == "" && e.HealthURL == "" {
+			return nil, fmt.Errorf("node registry %q: entry %d (%s) has neither an \"address\" nor a \"healthUrl\"", path, i, e.Name)
+		}
+		if e.HealthURL != "" {
+			u, perr := url.Parse(e.HealthURL)
+			if perr != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+				return nil, fmt.Errorf("node registry %q: entry %d (%s) has a \"healthUrl\" that is not an http:// or https:// URL: %q", path, i, e.Name, e.HealthURL)
+			}
 		}
 		// Watchdog.state is keyed by Name alone (see watchdog.go), so two
 		// entries sharing a name would silently overwrite each other's
@@ -54,7 +65,7 @@ func LoadNodes(path string) ([]watchdog.Node, error) {
 			return nil, fmt.Errorf("node registry %q: entry %d (%s) duplicates the \"name\" of entry %d - names must be unique", path, i, e.Name, first)
 		}
 		seen[e.Name] = i
-		nodes = append(nodes, watchdog.Node{Name: e.Name, Address: e.Address})
+		nodes = append(nodes, watchdog.Node{Name: e.Name, Address: e.Address, HealthURL: e.HealthURL})
 	}
 	return nodes, nil
 }

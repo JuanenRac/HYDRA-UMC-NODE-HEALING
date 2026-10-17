@@ -77,3 +77,31 @@ func TestLoadNodes_MalformedJSON(t *testing.T) {
 		t.Fatal("expected an error for malformed JSON, got nil")
 	}
 }
+
+func TestLoadNodes_HealthURLInsteadOfAddress(t *testing.T) {
+	path := writeTemp(t, `[{"name": "HYDRA-UMC-SERVER", "healthUrl": "http://127.0.0.1:8080/api/health"}]`)
+	nodes, err := LoadNodes(path)
+	if err != nil {
+		t.Fatalf("LoadNodes: %v", err)
+	}
+	if nodes[0].HealthURL != "http://127.0.0.1:8080/api/health" || nodes[0].Address != "" {
+		t.Fatalf("unexpected node: %+v", nodes[0])
+	}
+}
+
+func TestLoadNodes_HealthURLMustBeHTTP(t *testing.T) {
+	for _, bad := range []string{"127.0.0.1:8080/health", "ftp://127.0.0.1/health", "http://", "file:///etc/passwd"} {
+		path := writeTemp(t, `[{"name": "n", "healthUrl": "`+bad+`"}]`)
+		if _, err := LoadNodes(path); err == nil {
+			t.Errorf("healthUrl %q was accepted, want an error", bad)
+		}
+	}
+}
+
+func TestLoadNodes_NeitherAddressNorHealthURL(t *testing.T) {
+	path := writeTemp(t, `[{"name": "n"}]`)
+	_, err := LoadNodes(path)
+	if err == nil || !strings.Contains(err.Error(), "healthUrl") {
+		t.Fatalf("want an error naming healthUrl, got %v", err)
+	}
+}

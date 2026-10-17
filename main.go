@@ -8,6 +8,10 @@
 // hydra_common.proto contract vendored in src/healthpb) on a fixed
 // interval, printing every state transition to stdout.
 //
+// A node entry with a "healthUrl" is probed over HTTP (src/watchdog/httpprobe.go)
+// instead of gRPC, because the services in this ecosystem speak HTTP and none
+// of them implements the gRPC HealthService.
+//
 // Real failover is now wired in: --orchestrator-url points this at
 // HYDRA-UMC-ORCHESTRATOR's own real POST /nodes/:node/recover
 // (watchdog.OrchestratorReactor, new - the seam watchdog.Reactor always
@@ -32,6 +36,7 @@ import (
 func main() {
 	registryPath := flag.String("nodes", "nodes.example.json", "path to the JSON node registry to watch")
 	orchestratorURL := flag.String("orchestrator-url", "", "HYDRA-UMC-ORCHESTRATOR base URL (e.g. http://127.0.0.1:8114) to request real recovery from; empty logs transitions only, same as before this flag existed")
+	orchestratorToken := flag.String("orchestrator-token", os.Getenv("ORCHESTRATOR_TOKEN"), "bearer token sent with every recovery request (default: the ORCHESTRATOR_TOKEN environment variable)")
 	flag.Parse()
 
 	fmt.Printf("HYDRA-UMC-NODE-HEALING v%s\n", Version)
@@ -40,7 +45,7 @@ func main() {
 	nodes, err := config.LoadNodes(*registryPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[node-healing] fatal: %v\n", err)
-		fmt.Fprintln(os.Stderr, "[node-healing] see nodes.example.json for the expected format; every entry needs a running HealthService (hydra.common.v1) to actually report healthy.")
+		fmt.Fprintln(os.Stderr, "[node-healing] see nodes.example.json for the expected format; an entry with an \"address\" needs a running gRPC HealthService (hydra.common.v1), an entry with a \"healthUrl\" is probed with an HTTP GET (2xx = healthy).")
 		os.Exit(1)
 	}
 	fmt.Printf("[node-healing] watching %d node(s) from %s\n", len(nodes), *registryPath)
@@ -50,7 +55,7 @@ func main() {
 
 	var reactor watchdog.Reactor = watchdog.LogReactor{}
 	if *orchestratorURL != "" {
-		reactor = &watchdog.OrchestratorReactor{BaseURL: *orchestratorURL}
+		reactor = &watchdog.OrchestratorReactor{BaseURL: *orchestratorURL, Token: *orchestratorToken}
 		fmt.Printf("[node-healing] real recovery requests will be sent to orchestrator at %s\n", *orchestratorURL)
 	}
 

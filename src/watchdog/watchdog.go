@@ -17,6 +17,7 @@ package watchdog
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"sync"
 	"time"
 
@@ -81,6 +82,12 @@ func (s Status) String() string {
 type Node struct {
 	Name    string // must match healthpb.NodeIdentity.Name the node reports
 	Address string // host:port, e.g. "127.0.0.1:50100"
+	// HealthURL, when set, makes the watchdog probe this node with an HTTP
+	// GET instead of the gRPC HealthService (see httpprobe.go). Most
+	// services in this ecosystem speak HTTP only and none of them
+	// implement the gRPC HealthService, so a node left on the gRPC probe
+	// is reported UNREACHABLE no matter how healthy it is.
+	HealthURL string
 }
 
 // Reactor receives state-change events. The default used by main() only
@@ -121,6 +128,7 @@ type Watchdog struct {
 	RetryPolicy  RetryPolicy // bounded retries + backoff for transport-level failures - see retry.go
 	Reactor      Reactor
 	DialOptions  []grpc.DialOption // overridable for tests (in-process bufconn)
+	HTTPClient   *http.Client      // used for nodes with a HealthURL; nil builds one bounded by CheckTimeout
 
 	mu    sync.Mutex
 	state map[string]Status // keyed by Node.Name
@@ -231,6 +239,9 @@ func (w *Watchdog) checkNode(ctx context.Context, n Node) (Status, string) {
 // failures (dial/RPC error) - never for a node that answered but cannot
 // be trusted (StatusInvalid), since no amount of retrying fixes that.
 func (w *Watchdog) attemptCheck(ctx context.Context, n Node) (status Status, detail string, retryable bool) {
+	if n.HealthURL != "" {
+		return w.attemptHTTPCheck(ctx, n)
+	}
 	dialCtx, cancel := context.WithTimeout(ctx, w.CheckTimeout)
 	defer cancel()
 

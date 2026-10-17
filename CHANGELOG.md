@@ -18,6 +18,13 @@ semantic-versioning judgment calls:
 
 ---
 
+## [0.1.5] - Probes services over HTTP and presents its token to the orchestrator
+
+- **`healthUrl` in the node registry:** an entry can name an `http://` or `https://` URL instead of a gRPC `address` (`src/watchdog/httpprobe.go`). One `GET` is classified: 2xx healthy (a JSON `status` of `degraded`, `unhealthy` or `down` is honoured), 5xx unhealthy, no answer or a timeout unreachable and retried like a gRPC failure, a redirect or a 4xx invalid and never retried, a JSON `name` that differs from the registry name invalid. Redirects are never followed and the body read is capped at 64 KB. Before this every node was probed over a gRPC `HealthService` that no service of the ecosystem implements, so a healthy service was always reported `UNREACHABLE`. An entry needs an `address` or a `healthUrl`, and a `healthUrl` must be `http` or `https`.
+- **Bearer token to the orchestrator:** `-orchestrator-token` (default: the `ORCHESTRATOR_TOKEN` environment variable) is sent as `Authorization: Bearer` on every recovery request, which an orchestrator listening on a network address now requires.
+- **Node names are escaped** as one path segment in `POST /nodes/<name>/recover`, so a name with a slash or a question mark can no longer address another route.
+- `nodes.example.json` watches the orchestrator through its `/health` route. 11 new tests (48 in all): every answer of the HTTP probe, redirects, refused connections, slow nodes, retry behaviour, one transition per change, registry validation, the token and the escaping.
+
 ## [0.1.4] - Reversible-only repair plans
 
 - **`RunRepair` (`src/watchdog/repair.go`):** an automatic repair plan is refused whole, before

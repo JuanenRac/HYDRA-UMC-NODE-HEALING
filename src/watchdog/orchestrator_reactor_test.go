@@ -250,3 +250,40 @@ func TestOrchestratorReactor_NewerUnreachableTransitionSupersedesAnOlderPendingR
 		}
 	}
 }
+
+func TestOrchestratorReactor_SendsTheBearerTokenWhenConfigured(t *testing.T) {
+	var gotAuth string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAuth = r.Header.Get("Authorization")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	reactor := OrchestratorReactor{BaseURL: server.URL, Token: "s3cret-token", Printf: func(string, ...any) {}}
+	reactor.OnTransition(Node{Name: "node-a"}, StatusHealthy, StatusUnreachable, "")
+	if gotAuth != "Bearer s3cret-token" {
+		t.Errorf("Authorization = %q, want the bearer token", gotAuth)
+	}
+
+	gotAuth = "unset"
+	open := OrchestratorReactor{BaseURL: server.URL, Printf: func(string, ...any) {}}
+	open.OnTransition(Node{Name: "node-a"}, StatusHealthy, StatusUnreachable, "")
+	if gotAuth != "" {
+		t.Errorf("Authorization = %q without a token, want none", gotAuth)
+	}
+}
+
+func TestOrchestratorReactor_NodeNameIsEscapedInThePath(t *testing.T) {
+	var gotPath string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.EscapedPath()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	reactor := OrchestratorReactor{BaseURL: server.URL, Printf: func(string, ...any) {}}
+	reactor.OnTransition(Node{Name: "cell 1/a?b"}, StatusHealthy, StatusUnreachable, "")
+	if gotPath != "/nodes/cell%201%2Fa%3Fb/recover" {
+		t.Errorf("path = %q, want the node name escaped as one segment", gotPath)
+	}
+}
