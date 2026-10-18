@@ -25,6 +25,7 @@ semantic-versioning judgment calls:
 - **Health classification:** an HTTP health URL that answers a redirect or a 4xx is now `MISCONFIGURED` and never triggers recovery (it used to be treated like a dead node); a node that reports itself unhealthy can now trigger it; a queue that reports `persistenceHealthy: false` is `DEGRADED` instead of healthy.
 - **Token:** `ORCHESTRATOR_TOKEN` is no longer a flag default (so `-h` and usage errors no longer print it) and the systemd unit reads it from the orchestrator's environment file; a 401/403 is reported once with a clear message and is not retried. The unit also starts after the orchestrator.
 - **Logs and config:** passwords in a health URL stay out of log lines, node and dispatch names and addresses are validated at load, an entry with both an address and a health URL is refused, and a recovery request in flight is cancelled when the node comes back or the process stops.
+- **Example registry:** `nodes.example.json` watched two services over gRPC although no service of this ecosystem implements the gRPC health service (they would be reported unreachable for ever); it now lists the services that answer HTTP (`/health` or `/stats`), and a test keeps it that way.
 - **Build and docs:** `go mod tidy` applied, the README features describe what the watchdog really does (polling every 5 seconds, no thermal data, no restarts, no alerts yet), the unit comments are current, and the manifest maturity reads functional (59 tests).
 
 ## [0.1.5] - Probes services over HTTP and presents its token to the orchestrator

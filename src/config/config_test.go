@@ -123,3 +123,19 @@ func TestLoadNodes_DispatchNodeIsReadAndValidated(t *testing.T) {
 		}
 	}
 }
+
+func TestShippedExampleWatchesOnlyEndpointsThatExist(t *testing.T) {
+	nodes, err := LoadNodes("../../nodes.example.json")
+	if err != nil {
+		t.Fatalf("the shipped example does not load: %v", err)
+	}
+	for _, node := range nodes {
+		// no service of this ecosystem implements the gRPC HealthService, so the example must not use it
+		if node.Address != "" || node.HealthURL == "" {
+			t.Errorf("%s uses a gRPC address in the shipped example: %+v", node.Name, node)
+		}
+		if node.DispatchNode != "" {
+			t.Errorf("%s must not carry a dispatch node in the shipped example (it names no real dispatch node)", node.Name)
+		}
+	}
+}
