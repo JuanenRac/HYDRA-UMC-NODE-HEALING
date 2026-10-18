@@ -18,6 +18,15 @@ semantic-versioning judgment calls:
 
 ---
 
+## [0.1.6] - Recovery now needs proof, a dispatch node and a budget
+
+- **Guarded recovery:** one failed look used to requeue a node's missions at once, including on the first observation after start-up and for a service that merely answered 401 or 404. A recovery is now requested only after the node has stayed down for 15 seconds (any change of state in between cancels it), never during the first 60 seconds after the watchdog starts, at most once per node every 5 minutes and three times per 10 minutes overall (past that it only logs, as a circuit breaker). New flags `--recover-confirm-after`, `--startup-grace`, `--recover-cooldown` and `--recover-budget` tune the limits.
+- **Dispatch nodes:** the registry names are watched SERVICES, while the Orchestrator requeues the missions of a DISPATCH node, so recovery used to be a silent no-op. An entry now carries a `dispatchNode`; entries without one are only logged. The number of requeued missions the Orchestrator reports is logged.
+- **Health classification:** an HTTP health URL that answers a redirect or a 4xx is now `MISCONFIGURED` and never triggers recovery (it used to be treated like a dead node); a node that reports itself unhealthy can now trigger it; a queue that reports `persistenceHealthy: false` is `DEGRADED` instead of healthy.
+- **Token:** `ORCHESTRATOR_TOKEN` is no longer a flag default (so `-h` and usage errors no longer print it) and the systemd unit reads it from the orchestrator's environment file; a 401/403 is reported once with a clear message and is not retried. The unit also starts after the orchestrator.
+- **Logs and config:** passwords in a health URL stay out of log lines, node and dispatch names and addresses are validated at load, an entry with both an address and a health URL is refused, and a recovery request in flight is cancelled when the node comes back or the process stops.
+- **Build and docs:** `go mod tidy` applied, the README features describe what the watchdog really does (polling every 5 seconds, no thermal data, no restarts, no alerts yet), the unit comments are current, and the manifest maturity reads functional (59 tests).
+
 ## [0.1.5] - Probes services over HTTP and presents its token to the orchestrator
 
 - **`healthUrl` in the node registry:** an entry can name an `http://` or `https://` URL instead of a gRPC `address` (`src/watchdog/httpprobe.go`). One `GET` is classified: 2xx healthy (a JSON `status` of `degraded`, `unhealthy` or `down` is honoured), 5xx unhealthy, no answer or a timeout unreachable and retried like a gRPC failure, a redirect or a 4xx invalid and never retried, a JSON `name` that differs from the registry name invalid. Redirects are never followed and the body read is capped at 64 KB. Before this every node was probed over a gRPC `HealthService` that no service of the ecosystem implements, so a healthy service was always reported `UNREACHABLE`. An entry needs an `address` or a `healthUrl`, and a `healthUrl` must be `http` or `https`.

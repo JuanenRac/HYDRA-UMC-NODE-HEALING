@@ -105,3 +105,21 @@ func TestLoadNodes_NeitherAddressNorHealthURL(t *testing.T) {
 		t.Fatalf("want an error naming healthUrl, got %v", err)
 	}
 }
+
+func TestLoadNodes_DispatchNodeIsReadAndValidated(t *testing.T) {
+	path := writeTemp(t, `[{"name":"svc","healthUrl":"http://127.0.0.1:1/health","dispatchNode":"cell-2"}]`)
+	nodes, err := LoadNodes(path)
+	if err != nil || nodes[0].DispatchNode != "cell-2" {
+		t.Fatalf("nodes=%+v err=%v, want the dispatchNode kept", nodes, err)
+	}
+	for _, bad := range []string{
+		`[{"name":"svc","healthUrl":"http://127.0.0.1:1/health","dispatchNode":"has space"}]`,
+		`[{"name":"bad name","address":"127.0.0.1:1"}]`,
+		`[{"name":"svc","address":"not-an-address"}]`,
+		`[{"name":"svc","address":"127.0.0.1:1","healthUrl":"http://127.0.0.1:1/health"}]`,
+	} {
+		if _, err := LoadNodes(writeTemp(t, bad)); err == nil {
+			t.Errorf("registry %s was accepted, want an error", bad)
+		}
+	}
+}

@@ -10,3 +10,6 @@ __pycache__/
 
 # Go build output (build.sh/.bat's own `go build -o build/...`)
 /build/
+
+# Editor settings
+.vscode/

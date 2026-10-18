@@ -16,7 +16,7 @@
 
 ---
 
-**Verificação de honestidade - o que realmente funciona hoje:** o ciclo de sondagem/classificação (`src/watchdog/watchdog.go`), a política de repetição limitada (`src/watchdog/retry.go`), a ligação real do pedido de recuperação ao HYDRA-UMC-ORCHESTRATOR (`src/watchdog/orchestrator_reactor.go`) e o carregador estático do registo de nós (`src/config/config.go`) são todos reais e testados (48 testes a passar em `src/config` e `src/watchdog`) - e são idas e voltas gRPC reais sobre sockets loopback reais, não um cliente simulado. Uma lacuna conhecida e documentada: o registo de nós é um ficheiro JSON estático (`nodes.json`), não uma consulta em direto ao HYDRA-UMC-SWARM-SYNC, porque esse projeto também ainda não tem uma API real para consultar - esta é a v0 honesta, não um marcador de posição a fingir ser dinâmico. Redirecionar o trabalho de missão em curso para longe de um nó avariado também não é tarefa deste repositório - pede a recuperação através do `OrchestratorReactor` e fica por aí; a camada seguinte (mover de facto os trabalhos) vive noutro sítio. As 4 fases do roteiro (sincronização do gémeo digital, integração da física do Isaac Sim, padrões de recuperação automatizada, cura preditiva guiada por IA) são trabalho futuro aspiracional, ainda sem código por trás. Consulte o `CHANGELOG.md` para saber exatamente o que já foi entregue.
+**Verificação de honestidade - o que realmente funciona hoje:** o ciclo de sondagem/classificação (`src/watchdog/watchdog.go`), a política de repetição limitada (`src/watchdog/retry.go`), a ligação real do pedido de recuperação ao HYDRA-UMC-ORCHESTRATOR (`src/watchdog/orchestrator_reactor.go`) e o carregador estático do registo de nós (`src/config/config.go`) são todos reais e testados (59 testes a passar em `src/config` e `src/watchdog`) - e são idas e voltas gRPC reais sobre sockets loopback reais, não um cliente simulado. Uma lacuna conhecida e documentada: o registo de nós é um ficheiro JSON estático (`nodes.json`), não uma consulta em direto ao HYDRA-UMC-SWARM-SYNC, porque esse projeto também ainda não tem uma API real para consultar - esta é a v0 honesta, não um marcador de posição a fingir ser dinâmico. Redirecionar o trabalho de missão em curso para longe de um nó avariado também não é tarefa deste repositório - pede a recuperação através do `OrchestratorReactor` e fica por aí; a camada seguinte (mover de facto os trabalhos) vive noutro sítio. As 4 fases do roteiro (sincronização do gémeo digital, integração da física do Isaac Sim, padrões de recuperação automatizada, cura preditiva guiada por IA) são trabalho futuro aspiracional, ainda sem código por trás. Consulte o `CHANGELOG.md` para saber exatamente o que já foi entregue.
 
 ---
 
@@ -27,10 +27,10 @@ O **HYDRA-UMC-NODE-HEALING** é a camada de resiliência do enxame. Monitoriza c
 Se um nó falhar por avaria de hardware ou falha de rede, o Healing Manager aciona automaticamente um processo de failover, redirecionando as suas missões ativas para outros nós e notificando o operador através do Orchestrator.
 
 ### Funcionalidades principais:
-* 💓 **Heartbeat de saúde:** monitorização, abaixo de 10 ms, da disponibilidade e do estado térmico dos nós.
-* 🔄 **Failover automático:** reatribui de forma transparente as missões dos nós avariados a nós saudáveis.
-* 🛡️ **Soft reboot:** tenta a recuperação remota do serviço antes de acionar um reinício completo do hardware.
-* 📡 **Alertas ao operador:** notificação em tempo real em todas as interfaces (Studios, Apps, Watch).
+* 💓 **Batimento de saúde:** cada nó é consultado a cada 5 segundos (HealthService gRPC ou URL de saúde HTTP) e classificado como HEALTHY, DEGRADED, UNHEALTHY, UNREACHABLE, INVALID ou MISCONFIGURED; não são lidos dados térmicos.
+* 🔄 **Failover com salvaguardas:** pede ao orquestrador que volte a pôr em fila as missões de um nó que CONTINUA em baixo (espera de confirmação, tolerância no arranque, pausa por nó e orçamento global), apenas para entradas do registo que indiquem o seu `dispatchNode`.
+* 🛡️ **Reinício suave:** *(planeado)* hoje o watchdog não reinicia nada; apenas reporta e pede ao orquestrador que volte a pôr em fila.
+* 📡 **Alertas ao operador:** *(planeado)* hoje cada transição vai apenas para o journal.
 * 🔁 **Repetição limitada + identidade de nó verificada (v0, real):** uma falha de rede transitória deixa de passar o nó para `UNREACHABLE` à primeira falha - o `checkNode` repete com um backoff exponencial determinístico e limitado antes de desistir; um nó que responde mas não consegue identificar-se corretamente é classificado como `INVALID` e nunca é considerado de confiança, repetido nem dado como saudável.
 
 ---

@@ -16,7 +16,7 @@
 
 ---
 
-**Comprobación de honestidad - qué funciona realmente hoy:** el bucle de sondeo/clasificación (`src/watchdog/watchdog.go`), la política de reintento acotado (`src/watchdog/retry.go`), el cableado real de solicitud de recuperación a HYDRA-UMC-ORCHESTRATOR (`src/watchdog/orchestrator_reactor.go`), y el cargador estático del registro de nodos (`src/config/config.go`) son todos reales y están testeados (48 tests pasando entre `src/config` y `src/watchdog`) - y son round-trips gRPC reales sobre sockets loopback reales, no un cliente simulado. Lo que es una brecha conocida y documentada: el registro de nodos es un archivo JSON estático (`nodes.json`), no una consulta en vivo a HYDRA-UMC-SWARM-SYNC, porque ese proyecto tampoco tiene todavía una API real que consultar - esta es la v0 honesta, no un placeholder que finge ser dinámico. Redirigir el trabajo de misión en curso lejos de un nodo caído tampoco es tarea de este repositorio - solicita recuperación a través de `OrchestratorReactor` y se detiene ahí; la siguiente capa (mover realmente los trabajos) vive en otro lugar. Las 4 fases del roadmap (sincronización de gemelo digital, integración de física Isaac Sim, patrones de recuperación automatizada, curación predictiva basada en IA) son trabajo futuro aspiracional sin ningún código detrás todavía. Ver `CHANGELOG.md` para lo que se ha entregado exactamente hasta ahora.
+**Comprobación de honestidad - qué funciona realmente hoy:** el bucle de sondeo/clasificación (`src/watchdog/watchdog.go`), la política de reintento acotado (`src/watchdog/retry.go`), el cableado real de solicitud de recuperación a HYDRA-UMC-ORCHESTRATOR (`src/watchdog/orchestrator_reactor.go`), y el cargador estático del registro de nodos (`src/config/config.go`) son todos reales y están testeados (59 tests pasando entre `src/config` y `src/watchdog`) - y son round-trips gRPC reales sobre sockets loopback reales, no un cliente simulado. Lo que es una brecha conocida y documentada: el registro de nodos es un archivo JSON estático (`nodes.json`), no una consulta en vivo a HYDRA-UMC-SWARM-SYNC, porque ese proyecto tampoco tiene todavía una API real que consultar - esta es la v0 honesta, no un placeholder que finge ser dinámico. Redirigir el trabajo de misión en curso lejos de un nodo caído tampoco es tarea de este repositorio - solicita recuperación a través de `OrchestratorReactor` y se detiene ahí; la siguiente capa (mover realmente los trabajos) vive en otro lugar. Las 4 fases del roadmap (sincronización de gemelo digital, integración de física Isaac Sim, patrones de recuperación automatizada, curación predictiva basada en IA) son trabajo futuro aspiracional sin ningún código detrás todavía. Ver `CHANGELOG.md` para lo que se ha entregado exactamente hasta ahora.
 
 ---
 
@@ -27,10 +27,10 @@
 Si un nodo falla debido a un mal funcionamiento del hardware o una caída de la red, el Gestor de Healing activa automáticamente un proceso de failover, redirigiendo sus misiones activas a otros nodos y notificando al operador a través del Orquestador.
 
 ### Características Clave:
-* 💓 **Latido de Salud (Heartbeat):** Monitorización en menos de 10ms de la disponibilidad del nodo y el estado térmico.
-* 🔄 **Failover Automático:** Reasigna de forma transparente misiones de nodos fallidos a nodos sanos.
-* 🛡️ **Reinicio Suave:** Intenta la recuperación remota del servicio antes de activar un reinicio completo del hardware.
-* 📡 **Alertas al Operador:** Notificación en tiempo real a través de todas las interfaces (Studios, Apps, Watch).
+* 💓 **Latido de Salud (Heartbeat):** cada nodo se sondea cada 5 segundos (HealthService gRPC o URL de salud HTTP) y se clasifica como HEALTHY, DEGRADED, UNHEALTHY, UNREACHABLE, INVALID o MISCONFIGURED; no se lee ningún dato térmico.
+* 🔄 **Failover con Salvaguardas:** pide al Orquestador reencolar las misiones de un nodo que SIGUE caído (espera de confirmación, gracia de arranque, enfriamiento por nodo y presupuesto global), solo para entradas del registro que indiquen su `dispatchNode`.
+* 🛡️ **Reinicio Suave:** *(planificado)* hoy el watchdog no reinicia nada; solo informa y pide al Orquestador reencolar.
+* 📡 **Alertas al Operador:** *(planificado)* hoy cada transición va solo al journal.
 * 🔁 **Reintentos Acotados + Identidad de Nodo Verificada (v0, real):** un fallo de red transitorio ya no marca un nodo como `UNREACHABLE` al primer fallo - `checkNode` reintenta con un backoff exponencial determinista y acotado antes de rendirse; un nodo que responde pero no puede autoidentificarse correctamente se clasifica como `INVALID` y nunca se confía en él, se reintenta, ni se reporta como saludable.
 
 ---

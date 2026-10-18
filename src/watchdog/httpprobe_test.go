@@ -36,8 +36,8 @@ func TestHTTPProbe_ClassifiesEveryAnswer(t *testing.T) {
 		{"unhealthy json", 200, `{"status":"down"}`, StatusUnhealthy},
 		{"503", 503, ``, StatusUnhealthy},
 		{"500", 500, ``, StatusUnhealthy},
-		{"404 is a wrong URL", 404, ``, StatusInvalid},
-		{"401 is a missing credential", 401, ``, StatusInvalid},
+		{"404 is a wrong URL", 404, ``, StatusMisconfigured},
+		{"401 is a missing credential", 401, ``, StatusMisconfigured},
 		{"wrong name", 200, `{"status":"ok","name":"somebody-else"}`, StatusInvalid},
 	}
 	for _, c := range cases {
@@ -67,8 +67,8 @@ func TestHTTPProbe_ARedirectIsNotFollowed(t *testing.T) {
 	}))
 	defer srv.Close()
 	got, _ := probeWatchdog().CheckOnce(context.Background(), Node{Name: "node-a", HealthURL: srv.URL})
-	if got != StatusInvalid || atomic.LoadInt32(&hits) != 0 {
-		t.Fatalf("status = %s, redirect target hit %d times; want INVALID and 0", got, hits)
+	if got != StatusMisconfigured || atomic.LoadInt32(&hits) != 0 {
+		t.Fatalf("status = %s, redirect target hit %d times; want MISCONFIGURED and 0", got, hits)
 	}
 }
 

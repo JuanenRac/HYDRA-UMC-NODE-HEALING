@@ -52,6 +52,11 @@ const (
 	// StatusUnreachable, this is never retried: retrying does not fix a
 	// node lying about (or not knowing) its own name.
 	StatusInvalid
+	// StatusMisconfigured means the node's HTTP health URL answered with a
+	// redirect or a 4xx (a moved route, a missing credential): the problem is
+	// in the configuration, and says nothing about whether the node itself is
+	// alive, so it never triggers an automatic recovery.
+	StatusMisconfigured
 )
 
 func (s Status) String() string {
@@ -66,6 +71,8 @@ func (s Status) String() string {
 		return "UNREACHABLE"
 	case StatusInvalid:
 		return "INVALID"
+	case StatusMisconfigured:
+		return "MISCONFIGURED"
 	default:
 		return "UNKNOWN"
 	}
@@ -88,6 +95,12 @@ type Node struct {
 	// implement the gRPC HealthService, so a node left on the gRPC probe
 	// is reported UNREACHABLE no matter how healthy it is.
 	HealthURL string
+	// DispatchNode is the name this node has in HYDRA-UMC-ORCHESTRATOR's
+	// mission dispatch (the string passed to POST /missions/:id/dispatch).
+	// It is a different name space from Name, which is the SERVICE being
+	// watched: recovery asks the Orchestrator to requeue the missions
+	// dispatched to DispatchNode, and an entry without one never asks.
+	DispatchNode string
 }
 
 // Reactor receives state-change events. The default used by main() only

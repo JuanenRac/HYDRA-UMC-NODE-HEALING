@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -33,7 +34,20 @@ import (
 // answer is a few dozen bytes.
 const maxProbeBodyBytes = 64 * 1024
 
+// redactURL hides a password carried in the URL's userinfo, so a credential
+// never reaches the journal through a log line.
+func redactURL(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "(unparsable URL)"
+	}
+	return u.Redacted()
+}
+
 type httpHealthBody struct {
+	// PersistenceHealthy is reported by services (the job queue) whose
+	// "status" stays "ok" while they can no longer save their state.
+	PersistenceHealthy *bool  `json:"persistenceHealthy"`
 	Name    string `json:"name"`
 	Status  string `json:"status"`
 	Detail  string `json:"detail"`
@@ -57,7 +71,7 @@ func (w *Watchdog) attemptHTTPCheck(ctx context.Context, n Node) (status Status,
 	defer cancel()
 	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, n.HealthURL, nil)
 	if err != nil {
-		return StatusInvalid, fmt.Sprintf("health URL %q is not usable: %v", n.HealthURL, err), false
+		return StatusInvalid, fmt.Sprintf("health URL %q is not usable: %v", redactURL(n.HealthURL), err), false
 	}
 	req.Header.Set("Accept", "application/json")
 	resp, err := w.httpClient().Do(req)
@@ -69,14 +83,14 @@ func (w *Watchdog) attemptHTTPCheck(ctx context.Context, n Node) (status Status,
 
 	switch {
 	case resp.StatusCode >= 300 && resp.StatusCode < 500:
-		return StatusInvalid, fmt.Sprintf("health URL %s answered %s - that is a configuration problem, not a node failure", n.HealthURL, resp.Status), false
+		return StatusMisconfigured, fmt.Sprintf("health URL %s answered %s - that is a configuration problem, not a node failure", redactURL(n.HealthURL), resp.Status), false
 	case resp.StatusCode >= 500:
 		return StatusUnhealthy, fmt.Sprintf("health URL answered %s", resp.Status), false
 	}
 
 	var body httpHealthBody
 	if json.Unmarshal(raw, &body) == nil && body.Name != "" && body.Name != n.Name {
-		return StatusInvalid, fmt.Sprintf("node at %s self-identified as %q, expected %q - refusing to trust its health state", n.HealthURL, body.Name, n.Name), false
+		return StatusInvalid, fmt.Sprintf("node at %s self-identified as %q, expected %q - refusing to trust its health state", redactURL(n.HealthURL), body.Name, n.Name), false
 	}
 	text := body.Detail
 	if text == "" {
@@ -87,6 +101,12 @@ func (w *Watchdog) attemptHTTPCheck(ctx context.Context, n Node) (status Status,
 		return StatusDegraded, text, false
 	case "unhealthy", "down", "error", "fail", "failed":
 		return StatusUnhealthy, text, false
+	}
+	if body.PersistenceHealthy != nil && !*body.PersistenceHealthy {
+		if text == "" {
+			text = "the service reports that it cannot persist its state"
+		}
+		return StatusDegraded, text, false
 	}
 	return StatusHealthy, text, false
 }

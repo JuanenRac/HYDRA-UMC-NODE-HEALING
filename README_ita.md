@@ -16,7 +16,7 @@
 
 ---
 
-**Controllo di onestà - cosa funziona davvero oggi:** il ciclo di polling/classificazione (`src/watchdog/watchdog.go`), la policy di retry limitato (`src/watchdog/retry.go`), il vero cablaggio della richiesta di recupero verso HYDRA-UMC-ORCHESTRATOR (`src/watchdog/orchestrator_reactor.go`), e il caricatore statico del registro dei nodi (`src/config/config.go`) sono tutti reali e testati (48 test superati tra `src/config` e `src/watchdog`) - e sono veri round-trip gRPC su veri socket loopback, non un client simulato. Ciò che è una lacuna nota e documentata: il registro dei nodi è un file JSON statico (`nodes.json`), non una query live verso HYDRA-UMC-SWARM-SYNC, perché anche quel progetto non ha ancora una vera API da interrogare - questa è la v0 onesta, non un placeholder che finge di essere dinamico. Anche reindirizzare il lavoro di missione realmente in corso lontano da un nodo guasto non è compito di questo repository - richiede il recupero tramite `OrchestratorReactor` e si ferma lì; il livello successivo (spostare realmente i lavori) vive altrove. Le 4 fasi della roadmap (sincronizzazione del gemello digitale, integrazione fisica Isaac Sim, pattern di recupero automatizzato, guarigione predittiva basata su IA) sono lavoro futuro aspirazionale senza alcun codice dietro per ora. Vedi `CHANGELOG.md` per ciò che è stato consegnato esattamente finora.
+**Controllo di onestà - cosa funziona davvero oggi:** il ciclo di polling/classificazione (`src/watchdog/watchdog.go`), la policy di retry limitato (`src/watchdog/retry.go`), il vero cablaggio della richiesta di recupero verso HYDRA-UMC-ORCHESTRATOR (`src/watchdog/orchestrator_reactor.go`), e il caricatore statico del registro dei nodi (`src/config/config.go`) sono tutti reali e testati (59 test superati tra `src/config` e `src/watchdog`) - e sono veri round-trip gRPC su veri socket loopback, non un client simulato. Ciò che è una lacuna nota e documentata: il registro dei nodi è un file JSON statico (`nodes.json`), non una query live verso HYDRA-UMC-SWARM-SYNC, perché anche quel progetto non ha ancora una vera API da interrogare - questa è la v0 onesta, non un placeholder che finge di essere dinamico. Anche reindirizzare il lavoro di missione realmente in corso lontano da un nodo guasto non è compito di questo repository - richiede il recupero tramite `OrchestratorReactor` e si ferma lì; il livello successivo (spostare realmente i lavori) vive altrove. Le 4 fasi della roadmap (sincronizzazione del gemello digitale, integrazione fisica Isaac Sim, pattern di recupero automatizzato, guarigione predittiva basata su IA) sono lavoro futuro aspirazionale senza alcun codice dietro per ora. Vedi `CHANGELOG.md` per ciò che è stato consegnato esattamente finora.
 
 ---
 
@@ -27,10 +27,10 @@
 Se un nodo fallisce a causa di un malfunzionamento dell'hardware o di un'interruzione della rete, l'Healing Manager attiva automaticamente un processo di failover, reindirizzando le sue missioni attive ad altri nodi e notificando l'operatore tramite l'Orchestratore.
 
 ### Caratteristiche principali:
-* 💓 **Health Heartbeat:** Monitoraggio in meno di 10 ms della disponibilità dei nodi e dello stato termico.
-* 🔄 **Failover automatico:** Riassegna in modo trasparente le missioni dai nodi falliti a quelli sani.
-* 🛡️ **Soft Reboot:** Tenta il ripristino del servizio remoto prima di attivare un ripristino hardware completo.
-* 📡 **Avvisi operatore:** Notifica in tempo reale su tutte le interfacce (Studio, App, Watch).
+* 💓 **Heartbeat di salute:** ogni nodo viene interrogato ogni 5 secondi (HealthService gRPC o URL di salute HTTP) e classificato HEALTHY, DEGRADED, UNHEALTHY, UNREACHABLE, INVALID o MISCONFIGURED; non vengono letti dati termici.
+* 🔄 **Failover protetto:** chiede all'orchestratore di rimettere in coda le missioni di un nodo che RESTA inattivo (attesa di conferma, tolleranza all'avvio, pausa per nodo e budget globale), solo per le voci del registro che indicano il loro `dispatchNode`.
+* 🛡️ **Riavvio morbido:** *(pianificato)* oggi il watchdog non riavvia nulla; segnala soltanto e chiede all'orchestratore di rimettere in coda.
+* 📡 **Avvisi all'operatore:** *(pianificato)* oggi ogni transizione va solo nel journal.
 * 🔁 **Retry limitati + identità del nodo verificata (v0, reale):** un guasto di rete transitorio non fa più passare un nodo a `UNREACHABLE` al primo fallimento - `checkNode` riprova con un backoff esponenziale deterministico e limitato prima di arrendersi; un nodo che risponde ma non riesce ad autoidentificarsi correttamente viene classificato `INVALID` e non viene mai considerato affidabile, ritentato, o riportato come sano.
 
 ---

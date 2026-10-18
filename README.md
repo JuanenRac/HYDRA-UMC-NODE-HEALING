@@ -16,7 +16,7 @@
 
 ---
 
-**Honesty check - what actually runs today:** the polling/classification loop (`src/watchdog/watchdog.go`), the bounded retry policy (`src/watchdog/retry.go`), the real recovery-request wiring to HYDRA-UMC-ORCHESTRATOR (`src/watchdog/orchestrator_reactor.go`), and the static node-registry loader (`src/config/config.go`) are all real and tested (48 tests passing across `src/config` and `src/watchdog`) - and these are real gRPC round-trips over real loopback sockets, not a mocked client. What is a known, documented gap: the node registry is a static JSON file (`nodes.json`), not a live query to HYDRA-UMC-SWARM-SYNC, because that project has no real API yet either to query - this is the honest v0, not a placeholder pretending to be dynamic. Rerouting the actual in-flight mission work away from a failed node is also not this repository's job - it requests recovery through `OrchestratorReactor` and stops there; the next layer up (actually moving jobs) lives elsewhere. The 4 roadmap phases (digital-twin sync, Isaac Sim physics integration, automated recovery patterns, AI-driven predictive healing) are aspirational future work with no code behind them yet. See `CHANGELOG.md` for exactly what has shipped so far.
+**Honesty check - what actually runs today:** the polling/classification loop (`src/watchdog/watchdog.go`), the bounded retry policy (`src/watchdog/retry.go`), the real recovery-request wiring to HYDRA-UMC-ORCHESTRATOR (`src/watchdog/orchestrator_reactor.go`), and the static node-registry loader (`src/config/config.go`) are all real and tested (59 tests passing across `src/config` and `src/watchdog`) - and these are real gRPC round-trips over real loopback sockets, not a mocked client. What is a known, documented gap: the node registry is a static JSON file (`nodes.json`), not a live query to HYDRA-UMC-SWARM-SYNC, because that project has no real API yet either to query - this is the honest v0, not a placeholder pretending to be dynamic. Rerouting the actual in-flight mission work away from a failed node is also not this repository's job - it requests recovery through `OrchestratorReactor` and stops there; the next layer up (actually moving jobs) lives elsewhere. The 4 roadmap phases (digital-twin sync, Isaac Sim physics integration, automated recovery patterns, AI-driven predictive healing) are aspirational future work with no code behind them yet. See `CHANGELOG.md` for exactly what has shipped so far.
 
 ---
 
@@ -27,10 +27,10 @@
 If a node fails due to hardware malfunction or network outage, the Healing Manager automatically triggers a failover process, redirecting its active missions to other nodes and notifying the operator via the Orchestrator.
 
 ### Key Features:
-* 💓 **Health Heartbeat:** Sub-10ms monitoring of node availability and thermal state.
-* 🔄 **Automatic Failover:** Transparently reassigns missions from failed nodes to healthy ones.
-* 🛡️ **Soft Reboot:** Attempts remote service recovery before triggering a full hardware reset.
-* 📡 **Operator Alerts:** Real-time notification across all interfaces (Studios, Apps, Watch).
+* 💓 **Health Heartbeat:** every node is polled every 5 seconds (gRPC HealthService or HTTP health URL) and classified HEALTHY, DEGRADED, UNHEALTHY, UNREACHABLE, INVALID or MISCONFIGURED; no thermal data is read.
+* 🔄 **Guarded Failover:** asks the Orchestrator to requeue the missions of a node that STAYS down (confirmation wait, start-up grace, per-node cooldown and a global budget), only for registry entries that name their `dispatchNode`.
+* 🛡️ **Soft Reboot:** *(planned)* the watchdog never restarts anything today; it only reports and asks the Orchestrator to requeue.
+* 📡 **Operator Alerts:** *(planned)* today every transition goes to the journal only.
 * 🔁 **Bounded Retry + Verified Node Identity (v0, real):** a transient network blip no longer flips a node to `UNREACHABLE` on the first miss - `checkNode` retries with a deterministic, capped exponential backoff before giving up; a node that answers but cannot correctly self-identify is classified `INVALID` and never trusted, retried, or reported healthy.
 
 ---

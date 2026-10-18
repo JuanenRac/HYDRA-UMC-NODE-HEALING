@@ -8,7 +8,7 @@ GPL-3.0-or-later - see LICENSE
 
 Run `build-test.bat` or `build-test.sh` first. They execute the deterministic
 Go validation route without changing version or CHANGELOG. `build.bat` and
-`build.sh` are release flows and may increment metadata after successful tests.
+`build.sh` are release flows and increment the version before building (the shared build flow of the family).
 
 `run.bat` and `run.sh` are local operator entry points. Use an explicit local
 node inventory and inspect the resulting decision log; do not infer a real

@@ -36,8 +36,23 @@ import (
 func main() {
 	registryPath := flag.String("nodes", "nodes.example.json", "path to the JSON node registry to watch")
 	orchestratorURL := flag.String("orchestrator-url", "", "HYDRA-UMC-ORCHESTRATOR base URL (e.g. http://127.0.0.1:8114) to request real recovery from; empty logs transitions only, same as before this flag existed")
-	orchestratorToken := flag.String("orchestrator-token", os.Getenv("ORCHESTRATOR_TOKEN"), "bearer token sent with every recovery request (default: the ORCHESTRATOR_TOKEN environment variable)")
+	// The default is deliberately empty: a flag's default is printed by -h and by a
+	// usage error (into the journal), and the token must never be. It is read from
+	// the ORCHESTRATOR_TOKEN environment variable after parsing instead.
+	orchestratorToken := flag.String("orchestrator-token", "", "bearer token sent with every recovery request (prefer the ORCHESTRATOR_TOKEN environment variable: a flag value is visible in the process list)")
+	policy := watchdog.DefaultRecoveryPolicy()
+	confirmAfter := flag.Duration("recover-confirm-after", policy.ConfirmAfter, "how long a node must stay down (or unhealthy) before recovery is requested; 0 requests it at once")
+	startupGrace := flag.Duration("startup-grace", policy.StartupGrace, "no recovery is requested sooner than this after the watchdog starts")
+	cooldown := flag.Duration("recover-cooldown", policy.Cooldown, "minimum time between two recovery requests for the same node")
+	budget := flag.Int("recover-budget", policy.BudgetMax, "most recovery requests per 10 minutes across all nodes; past it the watchdog only logs (0 = unlimited)")
 	flag.Parse()
+	if *orchestratorToken == "" {
+		*orchestratorToken = os.Getenv("ORCHESTRATOR_TOKEN")
+	}
+	policy.ConfirmAfter = *confirmAfter
+	policy.StartupGrace = *startupGrace
+	policy.Cooldown = *cooldown
+	policy.BudgetMax = *budget
 
 	fmt.Printf("HYDRA-UMC-NODE-HEALING v%s\n", Version)
 	fmt.Println("High-availability watchdog: monitors every HydraNode heartbeat and triggers automatic failover to keep the swarm at zero downtime.")
@@ -55,8 +70,9 @@ func main() {
 
 	var reactor watchdog.Reactor = watchdog.LogReactor{}
 	if *orchestratorURL != "" {
-		reactor = &watchdog.OrchestratorReactor{BaseURL: *orchestratorURL, Token: *orchestratorToken}
-		fmt.Printf("[node-healing] real recovery requests will be sent to orchestrator at %s\n", *orchestratorURL)
+		reactor = &watchdog.OrchestratorReactor{BaseURL: *orchestratorURL, Token: *orchestratorToken, Policy: policy, Context: ctx}
+		fmt.Printf("[node-healing] recovery requests will be sent to orchestrator at %s only for registry entries with a \"dispatchNode\", after %s down, %s after start-up, at most %d per 10 minutes and one per node every %s\n",
+			*orchestratorURL, policy.ConfirmAfter, policy.StartupGrace, policy.BudgetMax, policy.Cooldown)
 	}
 
 	wd := watchdog.NewWatchdog(nodes, reactor)

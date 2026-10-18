@@ -12,16 +12,25 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
+	"regexp"
 
 	"github.com/JuanenRac/hydra-umc-node-healing/src/watchdog"
 )
+
+// validNodeName is the shape allowed for a node name and for a dispatch node
+// name: both end up in log lines and in a URL path.
+var validNodeName = regexp.MustCompile(`^[A-Za-z0-9_.:-]{1,128}$`)
 
 type nodeEntry struct {
 	Name      string `json:"name"`
 	Address   string `json:"address"`
 	HealthURL string `json:"healthUrl"`
+	// DispatchNode is the name this node has in the Orchestrator's mission
+	// dispatch; only an entry that has one is ever recovered automatically.
+	DispatchNode string `json:"dispatchNode"`
 }
 
 // LoadNodes reads a JSON array of {"name": "...", "address": "host:port"}
@@ -49,6 +58,20 @@ func LoadNodes(path string) ([]watchdog.Node, error) {
 		if e.Name == "" {
 			return nil, fmt.Errorf("node registry %q: entry %d has no \"name\"", path, i)
 		}
+		if !validNodeName.MatchString(e.Name) {
+			return nil, fmt.Errorf("node registry %q: entry %d has an invalid \"name\" %q - use letters, digits, '.', '_', '-' and ':' (up to 128 characters)", path, i, e.Name)
+		}
+		if e.DispatchNode != "" && !validNodeName.MatchString(e.DispatchNode) {
+			return nil, fmt.Errorf("node registry %q: entry %d (%s) has an invalid \"dispatchNode\" %q", path, i, e.Name, e.DispatchNode)
+		}
+		if e.Address != "" && e.HealthURL != "" {
+			return nil, fmt.Errorf("node registry %q: entry %d (%s) has both an \"address\" and a \"healthUrl\" - choose one probe", path, i, e.Name)
+		}
+		if e.Address != "" {
+			if host, port, aerr := net.SplitHostPort(e.Address); aerr != nil || host == "" || port == "" {
+				return nil, fmt.Errorf("node registry %q: entry %d (%s) has an \"address\" that is not host:port: %q", path, i, e.Name, e.Address)
+			}
+		}
 		if e.Address == "" && e.HealthURL == "" {
 			return nil, fmt.Errorf("node registry %q: entry %d (%s) has neither an \"address\" nor a \"healthUrl\"", path, i, e.Name)
 		}
@@ -65,7 +88,7 @@ func LoadNodes(path string) ([]watchdog.Node, error) {
 			return nil, fmt.Errorf("node registry %q: entry %d (%s) duplicates the \"name\" of entry %d - names must be unique", path, i, e.Name, first)
 		}
 		seen[e.Name] = i
-		nodes = append(nodes, watchdog.Node{Name: e.Name, Address: e.Address, HealthURL: e.HealthURL})
+		nodes = append(nodes, watchdog.Node{Name: e.Name, Address: e.Address, HealthURL: e.HealthURL, DispatchNode: e.DispatchNode})
 	}
 	return nodes, nil
 }
