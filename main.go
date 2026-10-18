@@ -1,6 +1,6 @@
 // HYDRA-UMC-NODE-HEALING - entry point
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-// GPL-3.0 - see LICENSE
+// GPL-3.0-or-later - see LICENSE
 //
 // Real watchdog loop, no longer just an identity print: loads a static
 // node registry (see src/config), then polls every listed node's

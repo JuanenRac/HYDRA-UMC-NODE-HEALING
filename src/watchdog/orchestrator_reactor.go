@@ -1,6 +1,6 @@
 // HYDRA-UMC-NODE-HEALING - watchdog package: orchestrator_reactor.go
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-// GPL-3.0 - see LICENSE
+// GPL-3.0-or-later - see LICENSE
 //
 // The real Reactor watchdog.go's own comment already named as the seam
 // to fill in "once HYDRA-UMC-ORCHESTRATOR has a real API to call for

@@ -9,7 +9,7 @@
 ### 🛡️ 面向 HydraNode 的高可用性监控与故障转移管理器
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Licencia-GPL%203.0-blue.svg" alt="GPL 3.0">
+  <img src="https://img.shields.io/badge/Licencia-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Feature-Self--Healing-green.svg" alt="Self-Healing">
   <img src="https://img.shields.io/badge/Platform-Distributed%20Edge-blue.svg" alt="Platform">
 </p>
@@ -266,4 +266,4 @@ go test ./...   # src/config + src/watchdog，基于真实回环套接字
 📺 [youtube.com/@electrohobby3d](https://youtube.com/@electrohobby3d)
 
 ## 📜 许可证
-GPL-3.0 —— 详见 LICENSE。
+GPL-3.0-or-later —— 详见 LICENSE。

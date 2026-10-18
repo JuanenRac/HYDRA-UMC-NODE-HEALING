@@ -1,6 +1,6 @@
 // HYDRA-UMC-NODE-HEALING - HTTP health probe
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-// GPL-3.0 - see LICENSE
+// GPL-3.0-or-later - see LICENSE
 //
 // The gRPC HealthService this watchdog was written against is not
 // implemented by any service in the ecosystem; they all expose a plain

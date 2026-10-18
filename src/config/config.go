@@ -1,6 +1,6 @@
 // HYDRA-UMC-NODE-HEALING - node registry config
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-// GPL-3.0 - see LICENSE
+// GPL-3.0-or-later - see LICENSE
 //
 // Static JSON registry of the nodes to watch. Deliberately not fetched
 // from HYDRA-UMC-SWARM-SYNC - see the "static and not discovered

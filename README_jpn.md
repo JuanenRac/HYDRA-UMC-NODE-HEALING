@@ -9,7 +9,7 @@
 ### 🛡️ HydraNode 向け高可用性モニター & フェイルオーバーマネージャー
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Licencia-GPL%203.0-blue.svg" alt="GPL 3.0">
+  <img src="https://img.shields.io/badge/Licencia-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Feature-Self--Healing-green.svg" alt="Self-Healing">
   <img src="https://img.shields.io/badge/Platform-Distributed%20Edge-blue.svg" alt="Platform">
 </p>
@@ -273,4 +273,4 @@ go test ./...   # src/config + src/watchdog、実際のループバック
 📺 [youtube.com/@electrohobby3d](https://youtube.com/@electrohobby3d)
 
 ## 📜 ライセンス
-GPL-3.0 —— 詳細は LICENSE を参照してください。
+GPL-3.0-or-later —— 詳細は LICENSE を参照してください。

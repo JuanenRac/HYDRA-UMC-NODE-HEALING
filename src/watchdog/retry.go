@@ -1,6 +1,6 @@
 // HYDRA-UMC-NODE-HEALING - watchdog package: retry policy
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-// GPL-3.0 - see LICENSE
+// GPL-3.0-or-later - see LICENSE
 //
 // A bounded retry policy for checkNode's dial/RPC attempts against a
 // single node within one poll tick. Real network blips (a brief

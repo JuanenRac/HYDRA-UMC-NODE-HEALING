@@ -9,7 +9,7 @@
 ### 🛡️ Monitor de alta disponibilidade e gestor de failover para HydraNodes
 
 <p align="center">
-  <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
+  <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Feature-Self--Healing-green.svg" alt="Self-Healing">
   <img src="https://img.shields.io/badge/Platform-Distributed%20Edge-blue.svg" alt="Platform">
 </p>
@@ -244,5 +244,5 @@ Este projeto faz parte do ecossistema de robótica HYDRA-UMC do mesmo autor (Jua
 📺 [youtube.com/@electrohobby3d](https://youtube.com/@electrohobby3d)
 
 ## 📜 LICENÇA
-GPL-3.0 - consulte LICENSE para mais detalhes.
+GPL-3.0-or-later - consulte LICENSE para mais detalhes.
 

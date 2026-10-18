@@ -1,6 +1,6 @@
 // HYDRA-UMC-NODE-HEALING - watchdog package
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-// GPL-3.0 - see LICENSE
+// GPL-3.0-or-later - see LICENSE
 //
 // The real heartbeat/detection loop described in the README's "HEALING
 // WORKFLOW" diagram: poll every registered node's HealthService.Check()

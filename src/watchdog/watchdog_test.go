@@ -1,6 +1,6 @@
 // HYDRA-UMC-NODE-HEALING - watchdog package tests
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-// GPL-3.0 - see LICENSE
+// GPL-3.0-or-later - see LICENSE
 //
 // Real gRPC round-trip tests: an in-process fake node implementing
 // HealthService for real (net.Listen on 127.0.0.1:0, a real *grpc.Server),

@@ -1,6 +1,6 @@
 // HYDRA-UMC-NODE-HEALING - HTTP health probe tests
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
-// GPL-3.0 - see LICENSE
+// GPL-3.0-or-later - see LICENSE
 //
 // Real HTTP round-trips against httptest servers: each response a service
 // can give is classified once, and a transport failure is retried while a

@@ -9,7 +9,7 @@
 ### 🛡️ Moniteur de haute disponibilité et gestionnaire de basculement pour HydraNodes
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Licence-GPL%203.0-blue.svg" alt="GPL 3.0">
+  <img src="https://img.shields.io/badge/Licence-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Fonction-Self--Healing-green.svg" alt="Self-Healing">
   <img src="https://img.shields.io/badge/Plateforme-Edge%20distribué-blue.svg" alt="Platform">
 </p>
@@ -267,4 +267,4 @@ Ce projet fait partie de l'écosystème robotique HYDRA-UMC du même auteur (Jua
 📺 [youtube.com/@electrohobby3d](https://youtube.com/@electrohobby3d)
 
 ## 📜 LICENCE
-GPL-3.0 - Voir le fichier LICENSE pour plus de détails.
+GPL-3.0-or-later - Voir le fichier LICENSE pour plus de détails.

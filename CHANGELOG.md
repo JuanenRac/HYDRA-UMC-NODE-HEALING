@@ -18,6 +18,11 @@ semantic-versioning judgment calls:
 
 ---
 
+## [0.1.7]
+
+- Build version synchronized with `hydra-umc.project.json` and the repository-native version source.
+- The licence is written as GPL-3.0-or-later in every header and in the package metadata.
+
 ## [0.1.6] - Recovery now needs proof, a dispatch node and a budget
 
 - **Guarded recovery:** one failed look used to requeue a node's missions at once, including on the first observation after start-up and for a service that merely answered 401 or 404. A recovery is now requested only after the node has stayed down for 15 seconds (any change of state in between cancels it), never during the first 60 seconds after the watchdog starts, at most once per node every 5 minutes and three times per 10 minutes overall (past that it only logs, as a circuit breaker). New flags `--recover-confirm-after`, `--startup-grace`, `--recover-cooldown` and `--recover-budget` tune the limits.
