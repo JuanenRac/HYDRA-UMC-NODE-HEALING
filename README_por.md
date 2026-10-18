@@ -20,6 +20,17 @@
 
 ---
 
+## 📋 Num relance
+
+| | |
+|---|---|
+| Versão | `0.1.7` |
+| Maturidade | Funcional |
+| Testes | 59 |
+| Tecnologia | Go / gRPC health checks / HTTP health probes |
+| Destino | O Raspberry Pi CM5 de uma célula HYDRA-UMC |
+| Em hardware real | Ainda não: não há registo de execução em hardware real para esta versão |
+
 ## 1. 🛠️ VISÃO TÉCNICA GERAL
 
 O **HYDRA-UMC-NODE-HEALING** é a camada de resiliência do enxame. Monitoriza continuamente a saúde de todos os HydraNodes físicos (controladores) e dos serviços lógicos, garantindo tempo de inatividade zero na microfábrica.
