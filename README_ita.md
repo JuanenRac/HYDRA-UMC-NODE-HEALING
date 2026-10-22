@@ -102,7 +102,7 @@ HYDRA-UMC-NODE-HEALING/
 ├── go.mod / go.sum    # Definizione del modulo Go
 ├── version.go         # const Version = "X.Y.Z" (go.mod non ha questo campo)
 ├── main.go            # Punto di ingresso: carica il registro e avvia il watchdog
-├── bump_version.py    # Bump di versione stile contachilometri
+├── bump_version.py    # Incremento di versione stile contachilometri (eseguito solo dal comando `bump` esplicito)
 ├── bump_manifest_version.py # Sincronizza la versione di hydra-umc.project.json con quella nativa (--sync)
 ├── build.sh/.bat      # Aggiorna la versione, poi `go build`
 ├── build-test.sh/.bat # Controllo build senza versionamento
@@ -134,9 +134,7 @@ run.bat -nodes nodes.example.json
 ./run.sh -nodes nodes.example.json
 ```
 
-`build.sh`/`build.bat` aggiornano la versione in `version.go` (regola
-contachilometri dell'ecosistema, vedi `bump_version.py` - `go.mod` non ha
-un campo di versione nativo per i binari applicativi) e poi eseguono
+`build.sh`/`build.bat` non cambiano mai la versione (solo `python tools/hydra_project_tool.py bump` la alza) e poi eseguono
 `go build`. `run.sh`/`run.bat` eseguono direttamente il binario risultante.
 
 Ogni voce del registro ha bisogno di qualcosa di reale in ascolto sul suo

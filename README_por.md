@@ -102,9 +102,9 @@ HYDRA-UMC-NODE-HEALING/
 ├── go.mod / go.sum    # Definição do módulo Go
 ├── version.go         # const Version = "X.Y.Z" (o go.mod não tem campo de versão da aplicação)
 ├── main.go            # Ponto de entrada: carrega o registo, executa o watchdog
-├── bump_version.py    # Subida de versão estilo odómetro, executada por build.sh/.bat
+├── bump_version.py    # Subida de versão ao estilo conta-quilómetros (executada só pelo comando `bump` explícito)
 ├── bump_manifest_version.py # Sincroniza a versão do hydra-umc.project.json com a nativa (--sync)
-├── build.sh/.bat      # Sobe a versão e depois executa `go build`
+├── build.sh/.bat      # Valida e compila (compilar nunca altera a versão)
 ├── build-test.sh/.bat # Verificação de compilação sem subir versão (sem CHANGELOG/versão)
 ├── run.sh/.bat        # Executa o binário compilado
 ├── docs/
@@ -132,7 +132,7 @@ run.bat -nodes nodes.example.json
 ./run.sh -nodes nodes.example.json
 ```
 
-O `build.sh`/`build.bat` sobe a versão em `version.go` (regra de odómetro de todo o ecossistema, ver `bump_version.py` - o `go.mod` não tem campo de versão nativo para binários de aplicações) e depois executa `go build`. O `run.sh`/`run.bat` executa diretamente o binário resultante.
+`build.sh`/`build.bat` nunca altera a versão (só `python tools/hydra_project_tool.py bump` a sobe) e depois executa `go build`. O `run.sh`/`run.bat` executa diretamente o binário resultante.
 
 Uma entrada com `healthUrl` (`http://…`, a forma de vigiar os serviços deste ecossistema) precisa de que esse URL responda `2xx`; uma entrada com `address` precisa de algo real a escutar aí e a implementar o `hydra.common.v1.HealthService` (ver `HYDRA-UMC-ORCHESTRATOR/proto/hydra_common.proto`) para alguma vez reportar saúde - com nada ainda a correr em nenhuma das portas de exemplo, espere que cada nó imprima `UNKNOWN -> UNREACHABLE` no primeiro tick (agora só depois de o `RetryPolicy` esgotar as suas tentativas limitadas, não à primeira ligação - ver a funcionalidade «Repetição limitada» acima), que é o resultado correto e honesto hoje (todos os nós deste ecossistema continuam em fase de andaime para lá da lógica de deteção deste repositório). Um nó que responde mas não consegue identificar-se corretamente imprime antes `UNKNOWN -> INVALID`, de imediato.
 
