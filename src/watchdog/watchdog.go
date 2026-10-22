@@ -101,6 +101,10 @@ type Node struct {
 	// watched: recovery asks the Orchestrator to requeue the missions
 	// dispatched to DispatchNode, and an entry without one never asks.
 	DispatchNode string
+	// Headers are sent with every HTTP health probe of this node (for example an
+	// Authorization header for a health route that wants a token). They come from the
+	// registry file, which is the operator's, and their values are never logged.
+	Headers map[string]string
 }
 
 // Reactor receives state-change events. The default used by main() only

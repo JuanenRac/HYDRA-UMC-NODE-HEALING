@@ -139,3 +139,36 @@ func TestShippedExampleWatchesOnlyEndpointsThatExist(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadNodes_Headers(t *testing.T) {
+	path := writeTemp(t, `[{"name": "svc", "healthUrl": "http://127.0.0.1:8000/health", "headers": {"Authorization": "Bearer abc", "X-Probe": "1"}}]`)
+	nodes, err := LoadNodes(path)
+	if err != nil {
+		t.Fatalf("LoadNodes: %v", err)
+	}
+	if nodes[0].Headers["Authorization"] != "Bearer abc" || len(nodes[0].Headers) != 2 {
+		t.Fatalf("headers lost: %+v", nodes[0].Headers)
+	}
+}
+
+func TestLoadNodes_RefusesBadHeaders(t *testing.T) {
+	cases := map[string]string{
+		"on a gRPC entry":         `[{"name": "svc", "address": "127.0.0.1:1", "headers": {"X-A": "b"}}]`,
+		"the Host header":         `[{"name": "svc", "healthUrl": "http://127.0.0.1:1/h", "headers": {"Host": "evil"}}]`,
+		"a name with a space":     `[{"name": "svc", "healthUrl": "http://127.0.0.1:1/h", "headers": {"X A": "b"}}]`,
+		"a value with a newline":  `[{"name": "svc", "healthUrl": "http://127.0.0.1:1/h", "headers": {"X-A": "b\r\nX-B: c"}}]`,
+		"too many headers":        `[{"name": "svc", "healthUrl": "http://127.0.0.1:1/h", "headers": {"A":"1","B":"1","C":"1","D":"1","E":"1","F":"1","G":"1","H":"1","I":"1"}}]`,
+	}
+	for name, content := range cases {
+		t.Run(name, func(t *testing.T) {
+			if _, err := LoadNodes(writeTemp(t, content)); err == nil {
+				t.Fatal("should have been refused")
+			}
+		})
+	}
+	// the secret never reaches the error text
+	_, err := LoadNodes(writeTemp(t, `[{"name": "svc", "healthUrl": "http://127.0.0.1:1/h", "headers": {"Host": "sup3rsecret"}}]`))
+	if err == nil || strings.Contains(err.Error(), "sup3rsecret") {
+		t.Fatalf("the error must not carry the value: %v", err)
+	}
+}

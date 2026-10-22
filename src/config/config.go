@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/JuanenRac/hydra-umc-node-healing/src/watchdog"
 )
@@ -24,6 +25,32 @@ import (
 // name: both end up in log lines and in a URL path.
 var validNodeName = regexp.MustCompile(`^[A-Za-z0-9_.:-]{1,128}$`)
 
+// validHeaderName is an HTTP header name (a token); the ones below are the connection's own and are not the registry's to set.
+var validHeaderName = regexp.MustCompile(`^[A-Za-z0-9-]{1,64}$`)
+
+var forbiddenHeaders = map[string]bool{"host": true, "content-length": true, "transfer-encoding": true, "connection": true, "upgrade": true}
+
+const maxHeaders = 8
+
+// checkHeaders refuses a header the probe must not send; the value is never put in the message, because it can be a secret.
+func checkHeaders(headers map[string]string) error {
+	if len(headers) > maxHeaders {
+		return fmt.Errorf("more than %d headers", maxHeaders)
+	}
+	for name, value := range headers {
+		if !validHeaderName.MatchString(name) {
+			return fmt.Errorf("header name %q is not valid", name)
+		}
+		if forbiddenHeaders[strings.ToLower(name)] {
+			return fmt.Errorf("header %q is set by the probe itself and cannot be given", name)
+		}
+		if len(value) > 1024 || strings.ContainsAny(value, "\r\n\x00") {
+			return fmt.Errorf("the value of header %q is too long or has a line break", name)
+		}
+	}
+	return nil
+}
+
 type nodeEntry struct {
 	Name      string `json:"name"`
 	Address   string `json:"address"`
@@ -31,6 +58,8 @@ type nodeEntry struct {
 	// DispatchNode is the name this node has in the Orchestrator's mission
 	// dispatch; only an entry that has one is ever recovered automatically.
 	DispatchNode string `json:"dispatchNode"`
+	// Headers are sent with every HTTP health probe of the node (only with a healthUrl).
+	Headers map[string]string `json:"headers"`
 }
 
 // LoadNodes reads a JSON array of {"name": "...", "address": "host:port"}
@@ -72,6 +101,14 @@ func LoadNodes(path string) ([]watchdog.Node, error) {
 				return nil, fmt.Errorf("node registry %q: entry %d (%s) has an \"address\" that is not host:port: %q", path, i, e.Name, e.Address)
 			}
 		}
+		if len(e.Headers) > 0 {
+			if e.HealthURL == "" {
+				return nil, fmt.Errorf("node registry %q: entry %d (%s) has \"headers\" but no \"healthUrl\": headers are only sent by the HTTP probe", path, i, e.Name)
+			}
+			if herr := checkHeaders(e.Headers); herr != nil {
+				return nil, fmt.Errorf("node registry %q: entry %d (%s): %v", path, i, e.Name, herr)
+			}
+		}
 		if e.Address == "" && e.HealthURL == "" {
 			return nil, fmt.Errorf("node registry %q: entry %d (%s) has neither an \"address\" nor a \"healthUrl\"", path, i, e.Name)
 		}
@@ -88,7 +125,7 @@ func LoadNodes(path string) ([]watchdog.Node, error) {
 			return nil, fmt.Errorf("node registry %q: entry %d (%s) duplicates the \"name\" of entry %d - names must be unique", path, i, e.Name, first)
 		}
 		seen[e.Name] = i
-		nodes = append(nodes, watchdog.Node{Name: e.Name, Address: e.Address, HealthURL: e.HealthURL, DispatchNode: e.DispatchNode})
+		nodes = append(nodes, watchdog.Node{Name: e.Name, Address: e.Address, HealthURL: e.HealthURL, DispatchNode: e.DispatchNode, Headers: e.Headers})
 	}
 	return nodes, nil
 }

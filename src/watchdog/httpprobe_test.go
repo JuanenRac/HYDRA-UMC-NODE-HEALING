@@ -11,6 +11,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -132,5 +133,36 @@ func TestHTTPProbe_TransitionsFireOncePerChange(t *testing.T) {
 	want := []string{"node-a:UNKNOWN->HEALTHY", "node-a:HEALTHY->UNHEALTHY"}
 	if len(got) != len(want) || got[0] != want[0] || got[1] != want[1] {
 		t.Fatalf("transitions = %v, want %v", got, want)
+	}
+}
+
+func TestHTTPProbe_SendsTheHeadersOfTheEntry(t *testing.T) {
+	var got atomic.Value
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got.Store(r.Header.Get("Authorization") + "|" + r.Header.Get("X-Probe"))
+		if r.Header.Get("Authorization") != "Bearer s3cret" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	node := Node{Name: "node-a", HealthURL: srv.URL, Headers: map[string]string{"Authorization": "Bearer s3cret", "X-Probe": "healing"}}
+	status, detail := probeWatchdog().CheckOnce(context.Background(), node)
+	if status != StatusHealthy {
+		t.Fatalf("with its header the node should be healthy, got %v (%s)", status, detail)
+	}
+	if got.Load() != "Bearer s3cret|healing" {
+		t.Fatalf("headers received: %v", got.Load())
+	}
+
+	// without the header the node says 401: a configuration problem, and the secret is not in the text
+	status, detail = probeWatchdog().CheckOnce(context.Background(), Node{Name: "node-a", HealthURL: srv.URL})
+	if status != StatusMisconfigured {
+		t.Fatalf("without the header the answer is a configuration problem, got %v", status)
+	}
+	if strings.Contains(detail, "s3cret") {
+		t.Fatalf("the detail must not carry a header value: %q", detail)
 	}
 }

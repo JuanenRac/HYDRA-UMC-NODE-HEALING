@@ -74,6 +74,9 @@ func (w *Watchdog) attemptHTTPCheck(ctx context.Context, n Node) (status Status,
 		return StatusInvalid, fmt.Sprintf("health URL %q is not usable: %v", redactURL(n.HealthURL), err), false
 	}
 	req.Header.Set("Accept", "application/json")
+	for name, value := range n.Headers {
+		req.Header.Set(name, value)
+	}
 	resp, err := w.httpClient().Do(req)
 	if err != nil {
 		return StatusUnreachable, err.Error(), true
