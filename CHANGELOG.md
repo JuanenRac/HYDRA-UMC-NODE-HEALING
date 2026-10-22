@@ -20,6 +20,7 @@ semantic-versioning judgment calls:
 
 ## [Unreleased]
 
+- The banner follows the animated style of the ecosystem banners, with the name, the kind and the technologies of the project.
 - **Headers per registry entry for the HTTP probe** (`"headers"`, up to eight, only with a `healthUrl`): a health route that wants a token can now be watched; the values are never logged and the headers of the connection itself are refused.
 - **The Related Projects line of HYDRA-UMC-SERVER no longer says that the healer monitors its live instances:** it can watch the health endpoint like any other node of the registry, and the example registry does not include it (eight languages).
 - **The READMEs no longer say that `docs/` and `images/` were pruned** (they exist); the paragraph lists the folders that really are not there, in the eight languages.
