@@ -180,7 +180,7 @@ Este proyecto es parte del ecosistema de robótica HYDRA-UMC del mismo autor (Ju
 - **[HYDRA-UMC-JOB-DISPATCHER](https://github.com/JuanenRac/HYDRA-UMC-JOB-DISPATCHER)** — cola de trabajos real basada en prioridad con deduplicación, sobre una API HTTP real.
 
 **Directamente Relacionados**
-- **[HYDRA-UMC-SERVER](https://github.com/JuanenRac/HYDRA-UMC-SERVER)** — el backend headless real (REST/WebSocket) con el que habla de verdad cada cliente de control — este servicio de curación monitoriza instancias en vivo de este backend.
+- **[HYDRA-UMC-SERVER](https://github.com/JuanenRac/HYDRA-UMC-SERVER)** — el backend headless real (REST/WebSocket) con el que habla de verdad cada cliente de control — este servicio de curación puede vigilar su endpoint de salud como cualquier otro nodo de su registro (el registro de ejemplo vigila ORCHESTRATOR, VOICE-UI, DATALAKE, ANOMALY-DETECTOR y COGNITIVE-NODE, no el servidor).
 
 **También Forma Parte del Ecosistema**
 

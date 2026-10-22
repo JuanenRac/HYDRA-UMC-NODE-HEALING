@@ -181,7 +181,7 @@ Dieses Projekt ist Teil des HYDRA-UMC-Robotik-Ökosystems desselben Autors (Juan
 - **[HYDRA-UMC-JOB-DISPATCHER](https://github.com/JuanenRac/HYDRA-UMC-JOB-DISPATCHER)** — echte prioritätsbasierte Job-Queue mit Deduplizierung, über eine echte HTTP-API.
 
 **Direkt verwandt**
-- **[HYDRA-UMC-SERVER](https://github.com/JuanenRac/HYDRA-UMC-SERVER)** — das reale Headless-Backend (REST/WebSocket), mit dem jeder Steuerungsclient tatsächlich spricht — dieser Healing-Dienst überwacht Live-Instanzen dieses Backends.
+- **[HYDRA-UMC-SERVER](https://github.com/JuanenRac/HYDRA-UMC-SERVER)** — das reale Headless-Backend (REST/WebSocket), mit dem jeder Steuerungsclient tatsächlich spricht — dieser Healing-Dienst kann seinen Health-Endpunkt wie jeden anderen Knoten seines Registers überwachen (das Beispielregister überwacht ORCHESTRATOR, VOICE-UI, DATALAKE, ANOMALY-DETECTOR und COGNITIVE-NODE, nicht den Server).
 
 **Ebenfalls Teil des Ökosystems**
 

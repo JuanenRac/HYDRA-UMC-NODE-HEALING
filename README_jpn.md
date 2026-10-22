@@ -185,7 +185,7 @@ go test ./...   # src/config + src/watchdog、実際のループバック
 - **[HYDRA-UMC-JOB-DISPATCHER](https://github.com/JuanenRac/HYDRA-UMC-JOB-DISPATCHER)** — 実際の HTTP API 上に構築された、優先度ベースの実際のジョブキュー(重複排除付き)。
 
 **直接関連**
-- **[HYDRA-UMC-SERVER](https://github.com/JuanenRac/HYDRA-UMC-SERVER)** — すべての制御クライアントが実際に通信する、本物のヘッドレスバックエンド(REST/WebSocket) ——本ヒーリングサービスは、このバックエンドのライブインスタンスを監視する。
+- **[HYDRA-UMC-SERVER](https://github.com/JuanenRac/HYDRA-UMC-SERVER)** — すべての制御クライアントが実際に通信する、本物のヘッドレスバックエンド(REST/WebSocket) ——本ヒーリングサービスは、レジストリの他のノードと同じようにそのヘルスエンドポイントを監視できます（サンプルのレジストリが監視するのは ORCHESTRATOR、VOICE-UI、DATALAKE、ANOMALY-DETECTOR、COGNITIVE-NODE で、サーバーではありません）。
 
 **エコシステムの他のプロジェクト**
 

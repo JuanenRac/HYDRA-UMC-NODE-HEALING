@@ -180,7 +180,7 @@ go test ./...   # src/config + src/watchdog，基于真实回环套接字
 - **[HYDRA-UMC-JOB-DISPATCHER](https://github.com/JuanenRac/HYDRA-UMC-JOB-DISPATCHER)** — 基于真实 HTTP API 的真实优先级任务队列，支持去重。
 
 **直接相关**
-- **[HYDRA-UMC-SERVER](https://github.com/JuanenRac/HYDRA-UMC-SERVER)** — 每个控制客户端真正通信的真实无头后端(REST/WebSocket) —— 本自愈服务监控该后端的在线实例。
+- **[HYDRA-UMC-SERVER](https://github.com/JuanenRac/HYDRA-UMC-SERVER)** — 每个控制客户端真正通信的真实无头后端(REST/WebSocket) —— 本自愈服务可以像监控其注册表中的其他节点一样监控它的健康端点（示例注册表监控的是 ORCHESTRATOR、VOICE-UI、DATALAKE、ANOMALY-DETECTOR 和 COGNITIVE-NODE，而不是服务器）。
 
 **生态系统中的其他项目**
 

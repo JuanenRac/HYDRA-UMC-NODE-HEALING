@@ -20,6 +20,7 @@ semantic-versioning judgment calls:
 
 ## [Unreleased]
 
+- **The Related Projects line of HYDRA-UMC-SERVER no longer says that the healer monitors its live instances:** it can watch the health endpoint like any other node of the registry, and the example registry does not include it (eight languages).
 - **The READMEs no longer say that `docs/` and `images/` were pruned** (they exist); the paragraph lists the folders that really are not there, in the eight languages.
 - **The roadmap of the READMEs is this project's own** (audit journal, faster probe, observability and registry reload, contract test and single-healer lease), in the eight languages; it was the roadmap of the whole ecosystem.
 - Tests only: the polling loop and its stop on shutdown, the default recovery safeguards, the retry fall-back for an invalid policy, the bounded background retry (a refused request is never retried, a dead orchestrator is asked a fixed number of times), recovery refusal on shutdown, and the outcome of every answer the orchestrator can give are now asserted.
