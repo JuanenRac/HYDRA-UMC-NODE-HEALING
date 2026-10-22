@@ -114,11 +114,7 @@ HYDRA-UMC-NODE-HEALING/
 └── README.md
 ```
 
-Aus der ursprünglichen Vorlage entfernt: `hardware/`, `firmware/`, `os/`,
-`docs/`, `images/` und `scripts/` — dies ist ein reiner Softwaredienst
-(Go-Binärdatei) ohne eigene Hardware oder Firmware, ohne zu pflegendes
-Betriebssystem-Image, und ohne Dokumentations-/Medien-/Utility-Skript-Inhalt,
-der eigene Ordner bislang rechtfertigen würde.
+Aus der ursprünglichen Vorlage entfernt: `hardware/`, `firmware/`, `os/` und `scripts/` — dies ist ein reiner Softwaredienst (Go-Binärdatei) ohne eigene Hardware oder Firmware, ohne zu pflegendes Betriebssystem-Image und ohne Utility-Skript-Inhalt, der bislang einen eigenen Ordner rechtfertigen würde.
 
 ---
 

@@ -114,11 +114,7 @@ HYDRA-UMC-NODE-HEALING/
 └── README.md
 ```
 
-Rimossi dal template originale: `hardware/`, `firmware/`, `os/`, `docs/`,
-`images/` e `scripts/` — è un servizio puramente software (binario Go)
-senza hardware o firmware propri, senza un'immagine del sistema operativo
-da mantenere, e senza contenuto di documentazione/media/script di utilità
-ancora sufficiente da giustificare cartelle proprie.
+Rimossi dal template originale: `hardware/`, `firmware/`, `os/` e `scripts/` — è un servizio puramente software (binario Go) senza hardware o firmware propri, senza un'immagine del sistema operativo da mantenere e senza contenuto di script di utilità che giustifichi ancora una cartella propria.
 
 ---
 
