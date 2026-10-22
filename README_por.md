@@ -144,10 +144,10 @@ go test ./...   # src/config + src/watchdog, idas e voltas gRPC reais
 ---
 
 ## 🚀 ROTEIRO
-* **Fase 1:** Sincronização do Digital Twin com telemetria de hardware em tempo real e latência abaixo de 10 ms.
-* **Fase 2:** Integração da Physics Replica com simuladores de nível industrial (Isaac Sim) e suporte a corpos deformáveis.
-* **Fase 3:** Padrões de recuperação automatizada do Node Healing para failover descentralizado e deteção precoce da degradação de sensores.
-* **Fase 4:** Cura preditiva guiada por IA com base na degradação precoce de sensores, e suporte do HIL Bridge para vehicle-in-the-loop à escala real.
+* **Fase 1:** Um diário de auditoria persistente (JSON por linhas) de cada decisão do reparador: o que viu, o que pediu e o que resultou.
+* **Fase 2:** Um sondeio mais rápido: um ciclo por nó com ligações gRPC persistentes e cabeçalhos por entrada para o sondeio HTTP.
+* **Fase 3:** Observabilidade própria (um endpoint de métricas) e recarga do registo de nós sem reiniciar.
+* **Fase 4:** Um teste de contrato contra um HYDRA-UMC-SERVER real e um arrendamento (lease) para que só um reparador aja de cada vez.
 
 ---
 

@@ -166,10 +166,10 @@ go test ./...   # src/config + src/watchdog, allers-retours gRPC
 ---
 
 ## 🚀 FEUILLE DE ROUTE
-* **Phase 1 :** Synchronisation du jumeau numérique avec la télémétrie matérielle en temps réel et latence inférieure à 10 ms.
-* **Phase 2 :** Intégration de Physics Replica avec des simulateurs de classe industrielle (Isaac Sim) et prise en charge des corps déformables.
-* **Phase 3 :** Modèles de récupération automatisés de Node Healing pour un basculement décentralisé et détection précoce de la dégradation des capteurs.
-* **Phase 4 :** « Healing » prédictif piloté par l'IA basé sur la dégradation précoce des capteurs et prise en charge de HIL Bridge pour le véhicule en boucle à grande échelle.
+* **Phase 1 :** Un journal d'audit persistant (JSON Lines) de chaque décision du réparateur : ce qu'il a vu, ce qu'il a demandé et ce qui en est résulté.
+* **Phase 2 :** Une sonde plus rapide : une boucle par nœud avec des connexions gRPC persistantes et des en-têtes par entrée pour la sonde HTTP.
+* **Phase 3 :** Une observabilité propre (un point d'accès de métriques) et un rechargement du registre des nœuds sans redémarrage.
+* **Phase 4 :** Un test de contrat contre un vrai HYDRA-UMC-SERVER et un bail (lease) pour qu'un seul réparateur agisse à la fois.
 
 ---
 

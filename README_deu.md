@@ -165,10 +165,10 @@ go test ./...   # src/config + src/watchdog, echte gRPC-Roundtrips
 ---
 
 ## 🚀 FAHRPLAN
-* **Phase 1:** Digital-Twin-Synchronisation mit Echtzeit-Hardware-Telemetrie und Sub-10ms-Latenz.
-* **Phase 2:** Physics Replica-Integration mit industriellen Simulatoren (Isaac Sim) und Unterstützung für verformbare Körper.
-* **Phase 3:** Automatisierte Wiederherstellungsmuster von Node Healing für dezentrales Failover und frühzeitige Erkennung von Sensordegradation.
-* **Phase 4:** KI-gestütztes prädiktives Healing basierend auf frühzeitiger Sensordegradation und HIL-Bridge-Unterstützung für Full-Scale Vehicle-in-the-Loop.
+* **Phase 1:** Ein dauerhaftes Audit-Journal (JSON Lines) jeder Entscheidung des Healers: was er sah, was er anforderte und was daraus wurde.
+* **Phase 2:** Eine schnellere Prüfung: eine Schleife pro Knoten mit dauerhaften gRPC-Verbindungen und Header pro Eintrag für die HTTP-Prüfung.
+* **Phase 3:** Eigene Beobachtbarkeit (ein Metrik-Endpunkt) und ein Neuladen des Knotenregisters ohne Neustart.
+* **Phase 4:** Ein Vertragstest gegen einen echten HYDRA-UMC-SERVER und ein Lease, damit immer nur ein Healer handelt.
 
 ---
 

@@ -163,10 +163,10 @@ go test ./...   # src/config + src/watchdog, real gRPC round-trips
 ---
 
 ## 🚀 ROADMAP
-* **Phase 1:** Digital Twin synchronization with real-time hardware telemetry and sub-10ms latency.
-* **Phase 2:** Physics Replica integration with industrial-grade simulators (Isaac Sim) and deformable body support.
-* **Phase 3:** Node Healing automated recovery patterns for decentralized failover and early sensor degradation detection.
-* **Phase 4:** AI-driven predictive healing based on early sensor degradation and HIL Bridge support for full-scale vehicle-in-the-loop.
+* **Phase 1:** A persistent audit journal (JSON lines) of every decision of the healer: what it saw, what it asked and what came of it.
+* **Phase 2:** A faster probe: one loop per node with persistent gRPC connections, and headers per entry for the HTTP probe.
+* **Phase 3:** Its own observability (a metrics endpoint) and a reload of the node registry without a restart.
+* **Phase 4:** A contract test against a real HYDRA-UMC-SERVER and a lease so that only one healer acts at a time.
 
 ---
 
