@@ -26,7 +26,7 @@
 
 | | |
 |---|---|
-| Versão | `0.1.7` |
+| Versão | `0.1.8` |
 | Maturidade | Funcional |
 | Testes | 78 |
 | Tecnologia | Go / gRPC health checks / HTTP health probes |

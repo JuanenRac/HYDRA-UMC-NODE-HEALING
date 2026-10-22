@@ -26,7 +26,7 @@
 
 | | |
 |---|---|
-| Version | `0.1.7` |
+| Version | `0.1.8` |
 | Reifegrad | Funktionsfähig |
 | Tests | 78 |
 | Technik | Go / gRPC health checks / HTTP health probes |

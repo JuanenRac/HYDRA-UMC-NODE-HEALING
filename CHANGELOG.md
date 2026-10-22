@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here.
 
-## [Unreleased]
+## [0.1.8] - Headers for the health probe and documentation that matches the folders
 
 - The banner follows the animated style of the ecosystem banners, with the name, the kind and the technologies of the project.
 - **Headers per registry entry for the HTTP probe** (`"headers"`, up to eight, only with a `healthUrl`): a health route that wants a token can now be watched; the values are never logged and the headers of the connection itself are refused.
