@@ -16,6 +16,8 @@ repeated observations of the same state are idempotent (no duplicate action
 on an unchanged classification - a `Reactor` fires only on a real state
 *change*).
 
+**What the watchdog exposes.** The snapshot is held in memory; there is no versioned snapshot document on disk or on the wire. What a consumer can read is the status endpoint (`-listen`): `GET /health` for liveness and `GET /metrics` in Prometheus text (status, last check, duration, checks, transitions per node, and the recovery requests sent). The journal (`-journal`) keeps the transitions.
+
 **Credentials for the probe.** An entry with a `healthUrl` may carry `"headers"` (up to eight, for example an `Authorization` header for a health route that wants a token): they are sent with every probe of that entry only, the registry file is the operator's and not part of the repository, a value is never written to a log or an error, and the headers that belong to the connection itself (`Host`, `Content-Length`, `Transfer-Encoding`, `Connection`, `Upgrade`) are refused. An entry with an `address` (gRPC) cannot have them.
 
 **Output - two real, already-implemented commands, not one decision-only

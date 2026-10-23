@@ -29,6 +29,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -129,6 +130,8 @@ type OrchestratorReactor struct {
 	Context context.Context
 	// Now defaults to time.Now - overridable for tests.
 	Now func() time.Time
+
+	requests atomic.Int64 // recovery POSTs sent, whatever the answer
 
 	mu         sync.Mutex
 	pending    map[string]context.CancelFunc // node name -> cancel for its in-flight confirmation or retry, if any
@@ -292,6 +295,9 @@ func (r *OrchestratorReactor) recoverNow(ctx context.Context, node Node, target 
 	r.startBackgroundRetry(node, target)
 }
 
+// RecoveryRequests is how many recovery requests were sent to the Orchestrator, whatever the answer.
+func (r *OrchestratorReactor) RecoveryRequests() int64 { return r.requests.Load() }
+
 type recoveryOutcome int
 
 const (
@@ -317,6 +323,7 @@ func (r *OrchestratorReactor) attemptRecovery(ctx context.Context, node Node, ta
 	if r.Token != "" {
 		req.Header.Set("Authorization", "Bearer "+r.Token)
 	}
+	r.requests.Add(1)
 	resp, err := client.Do(req)
 	if err != nil {
 		if ctx.Err() == nil {

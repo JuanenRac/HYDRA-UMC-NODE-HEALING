@@ -48,6 +48,7 @@
 * 📡 **操作员告警：** *（计划中）* 目前所有状态转换只写入日志。
 * 🔁 **限次重试 + 已验证节点身份（v0，真实）：** 一次瞬时网络故障不再让节点在第一次失败时就被判为 `UNREACHABLE`——`checkNode` 会先以确定性的、有上限的指数退避重试，然后才放弃；一个应答了但无法正确自证身份的节点会被分类为 `INVALID`，永远不会被信任、重试或报告为健康。
 * 📓 **持久化日志(v0,已实现):** 使用 `-journal 路径` 后,每次状态转换、恢复请求和被拦下的请求都会同时写成一行 JSON,每行用 SHA-256 与上一行链接,并按大小轮转(`-journal-max-bytes`、`-journal-backups`);重启之后仍能查到某个节点为何被重启。`-journal-verify` 检查链。默认关闭;无法写入的行会被报告,绝不会让看门狗停止。 systemd 单元默认不启用日志；要启用，请在 `/etc/hydra-umc-node-healing/journal.env` 中写入 `HYDRA_UMC_NODE_HEALING_JOURNAL_ARGS=--journal /var/lib/hydra-umc-node-healing/journal.jsonl`（OS 安装器的 `--journal` 选项会写入它）。进入日志或探测详情的所有内容都会经过共享的机密脱敏。 `hydra-umc-node-healing -nodes-from-ports 路径/contracts/ports.yaml` 会根据生态系统的服务登记表（每个有健康路径的服务，通过 HTTP 探测）生成并输出节点登记表，并列出被排除的服务，因此无需手写 `nodes.json`。
+* 📈 **监视看门狗(v0，真实):** 使用 `-listen HOST:PORT` 提供 `GET /health`(存活:版本、运行时间、节点数；不含名称)和 `GET /metrics`(Prometheus：每个节点的状态、最近检查、耗时、检查次数、状态变化次数和恢复请求数)。非回环地址需要 `-status-token`(或 `STATUS_TOKEN`)，在 `/metrics` 上校验。`kill -HUP` 重新读取注册表(未通过校验的会被拒绝，节点保持原样；保留的节点保留其状态)，`-check-config` 校验注册表后退出。健康节点通过在两次探测之间保持的一条 gRPC 连接来探测。已针对替身和本地服务器测试；从未针对真实设备群运行。
 
 ---
 

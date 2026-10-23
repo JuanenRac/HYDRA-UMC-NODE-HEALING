@@ -149,6 +149,22 @@ type Watchdog struct {
 
 	mu    sync.Mutex
 	state map[string]Status // keyed by Node.Name
+	stats map[string]*nodeStats
+
+	// One gRPC connection per node address, kept between polls: a healthy node is not dialed and torn down
+	// every tick. A connection that fails is dropped, so the next attempt dials from scratch (no reconnect
+	// back-off waiting in the way of seeing a node come back).
+	connMu sync.Mutex
+	conns  map[string]*grpc.ClientConn
+}
+
+// nodeStats is what the status endpoint reports about one node.
+type nodeStats struct {
+	since       time.Time
+	lastCheck   time.Time
+	lastLatency time.Duration
+	checks      int64
+	transitions int64
 }
 
 // NewWatchdog builds a Watchdog with production-sane defaults (5s poll
@@ -165,13 +181,94 @@ func NewWatchdog(nodes []Node, reactor Reactor) *Watchdog {
 		Reactor:      reactor,
 		DialOptions:  []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())},
 		state:        make(map[string]Status),
+		stats:        make(map[string]*nodeStats),
+		conns:        make(map[string]*grpc.ClientConn),
 	}
+}
+
+// SetNodes replaces the list of watched nodes while the watchdog runs (a reload of the registry). Nodes that
+// are no longer listed lose their state and statistics, and the connections nobody uses any more are closed.
+// A node that stays keeps its state, so a reload never announces a transition that did not happen.
+func (w *Watchdog) SetNodes(nodes []Node) {
+	w.mu.Lock()
+	keep := make(map[string]bool, len(nodes))
+	addresses := make(map[string]bool, len(nodes))
+	for _, n := range nodes {
+		keep[n.Name] = true
+		if n.HealthURL == "" {
+			addresses[n.Address] = true
+		}
+	}
+	for name := range w.state {
+		if !keep[name] {
+			delete(w.state, name)
+			delete(w.stats, name)
+		}
+	}
+	w.Nodes = append([]Node(nil), nodes...)
+	w.mu.Unlock()
+
+	w.connMu.Lock()
+	for address, conn := range w.conns {
+		if !addresses[address] {
+			_ = conn.Close()
+			delete(w.conns, address)
+		}
+	}
+	w.connMu.Unlock()
+}
+
+func (w *Watchdog) currentNodes() []Node {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return append([]Node(nil), w.Nodes...)
+}
+
+// Close closes the connections the watchdog keeps. Run calls it when it stops.
+func (w *Watchdog) Close() {
+	w.connMu.Lock()
+	defer w.connMu.Unlock()
+	for address, conn := range w.conns {
+		_ = conn.Close()
+		delete(w.conns, address)
+	}
+}
+
+// connection returns the kept connection to address, creating it the first time. Nothing is dialed here:
+// the first call on it connects.
+func (w *Watchdog) connection(address string) (*grpc.ClientConn, error) {
+	w.connMu.Lock()
+	defer w.connMu.Unlock()
+	if w.conns == nil {
+		w.conns = make(map[string]*grpc.ClientConn)
+	}
+	if conn, ok := w.conns[address]; ok {
+		return conn, nil
+	}
+	// passthrough: the address is handed to the dialer as it is, as grpc.DialContext always did
+	conn, err := grpc.NewClient("passthrough:///"+address, w.DialOptions...)
+	if err != nil {
+		return nil, err
+	}
+	w.conns[address] = conn
+	return conn, nil
+}
+
+// dropConnection closes conn and forgets it, if it is still the one kept for address.
+func (w *Watchdog) dropConnection(address string, conn *grpc.ClientConn) {
+	w.connMu.Lock()
+	if w.conns[address] == conn {
+		delete(w.conns, address)
+	}
+	w.connMu.Unlock()
+	_ = conn.Close()
 }
 
 // Run polls every node once per Interval until ctx is cancelled. Blocking;
 // call it in its own goroutine (or as main()'s last call, which is what
 // this repo's main.go does).
 func (w *Watchdog) Run(ctx context.Context) {
+	defer w.Close()
 	w.pollAll(ctx)
 	ticker := time.NewTicker(w.Interval)
 	defer ticker.Stop()
@@ -187,7 +284,7 @@ func (w *Watchdog) Run(ctx context.Context) {
 
 func (w *Watchdog) pollAll(ctx context.Context) {
 	var wg sync.WaitGroup
-	for _, n := range w.Nodes {
+	for _, n := range w.currentNodes() {
 		wg.Add(1)
 		go func(n Node) {
 			defer wg.Done()
@@ -198,10 +295,24 @@ func (w *Watchdog) pollAll(ctx context.Context) {
 }
 
 func (w *Watchdog) pollOne(ctx context.Context, n Node) {
+	started := time.Now()
 	status, detail := w.checkNode(ctx, n)
+	latency := time.Since(started)
 	w.mu.Lock()
 	prev, seen := w.state[n.Name]
 	w.state[n.Name] = status
+	stats := w.stats[n.Name]
+	if stats == nil {
+		stats = &nodeStats{}
+		w.stats[n.Name] = stats
+	}
+	stats.checks++
+	stats.lastCheck = started
+	stats.lastLatency = latency
+	if !seen || prev != status {
+		stats.transitions++
+		stats.since = started
+	}
 	w.mu.Unlock()
 
 	// Only fire the reactor on an actual state change - the first
@@ -259,20 +370,18 @@ func (w *Watchdog) attemptCheck(ctx context.Context, n Node) (status Status, det
 	if n.HealthURL != "" {
 		return w.attemptHTTPCheck(ctx, n)
 	}
-	dialCtx, cancel := context.WithTimeout(ctx, w.CheckTimeout)
-	defer cancel()
-
-	conn, err := grpc.DialContext(dialCtx, n.Address, append([]grpc.DialOption{grpc.WithBlock()}, w.DialOptions...)...)
+	conn, err := w.connection(n.Address)
 	if err != nil {
 		return StatusUnreachable, err.Error(), true
 	}
-	defer conn.Close()
 
 	client := healthpb.NewHealthServiceClient(conn)
-	checkCtx, cancel2 := context.WithTimeout(ctx, w.CheckTimeout)
-	defer cancel2()
+	checkCtx, cancel := context.WithTimeout(ctx, w.CheckTimeout)
+	defer cancel()
 	report, err := client.Check(checkCtx, &healthpb.Empty{})
 	if err != nil {
+		// a failed call may be a node that went away and a connection that went with it: the next attempt dials again
+		w.dropConnection(n.Address, conn)
 		return StatusUnreachable, err.Error(), true
 	}
 

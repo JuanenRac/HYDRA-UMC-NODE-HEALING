@@ -29,6 +29,7 @@ import (
 	"strings"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/JuanenRac/hydra-umc-node-healing/src/config"
 	"github.com/JuanenRac/hydra-umc-node-healing/src/watchdog"
@@ -50,6 +51,9 @@ func main() {
 	journalMaxBytes := flag.Int64("journal-max-bytes", watchdog.DefaultJournalMaxBytes, "size at which the journal is rotated")
 	journalBackups := flag.Int("journal-backups", watchdog.DefaultJournalBackups, "how many rotated journal files are kept")
 	journalVerify := flag.Bool("journal-verify", false, "check the hash chain of the file given with -journal and exit")
+	listen := flag.String("listen", "", "address (host:port) for the read-only status endpoint: GET /health (liveness) and GET /metrics (Prometheus); empty serves nothing. A non-loopback address needs -status-token")
+	statusToken := flag.String("status-token", "", "bearer token demanded on /metrics (prefer the STATUS_TOKEN environment variable: a flag value is visible in the process list)")
+	checkConfig := flag.Bool("check-config", false, "load and validate the node registry given with -nodes, print a summary and exit (0 = valid)")
 	nodesFromPorts := flag.String("nodes-from-ports", "", "print a node registry built from the service registry of the ecosystem (contracts/ports.yaml of the SDK): every service with a health path, probed over HTTP; the services left out are listed on stderr; then exit")
 	flag.Parse()
 	if *nodesFromPorts != "" {
@@ -91,8 +95,37 @@ func main() {
 		fmt.Printf("JOURNAL_CHAIN=PASS %d line(s), chain intact\n", lines)
 		return
 	}
+	if *checkConfig {
+		nodes, loadErr := config.LoadNodes(*registryPath)
+		if loadErr != nil {
+			fmt.Printf("CONFIG=FAIL %v\n", loadErr)
+			os.Exit(1)
+		}
+		httpNodes, grpcNodes, dispatch := 0, 0, 0
+		for _, n := range nodes {
+			if n.HealthURL != "" {
+				httpNodes++
+			} else {
+				grpcNodes++
+			}
+			if n.DispatchNode != "" {
+				dispatch++
+			}
+		}
+		fmt.Printf("CONFIG=PASS %d node(s): %d over HTTP, %d over gRPC, %d with a dispatchNode\n", len(nodes), httpNodes, grpcNodes, dispatch)
+		return
+	}
 	if *orchestratorToken == "" {
 		*orchestratorToken = os.Getenv("ORCHESTRATOR_TOKEN")
+	}
+	if *statusToken == "" {
+		*statusToken = os.Getenv("STATUS_TOKEN")
+	}
+	if *listen != "" {
+		if listenErr := watchdog.ValidateListen(*listen, *statusToken); listenErr != nil {
+			fmt.Fprintf(os.Stderr, "[node-healing] fatal: %v\n", listenErr)
+			os.Exit(1)
+		}
 	}
 	policy.ConfirmAfter = *confirmAfter
 	policy.StartupGrace = *startupGrace
@@ -129,6 +162,47 @@ func main() {
 	}
 
 	wd := watchdog.NewWatchdog(nodes, reactor)
+
+	if *listen != "" {
+		status := &watchdog.StatusServer{Watchdog: wd, Version: Version, Started: time.Now(), Token: *statusToken}
+		if counter, ok := reactor.(watchdog.RecoveryCounter); ok {
+			status.Recoveries = counter
+		}
+		go func() {
+			if serveErr := status.Serve(ctx, *listen); serveErr != nil {
+				fmt.Fprintf(os.Stderr, "[node-healing] status endpoint on %s stopped: %v\n", *listen, serveErr)
+			}
+		}()
+		fmt.Printf("[node-healing] status endpoint: http://%s/health and /metrics\n", *listen)
+	}
+
+	// SIGHUP reads the registry again. A registry that does not load or does not validate is refused
+	// and the nodes being watched stay as they were; a node that stays keeps its state.
+	reload := make(chan os.Signal, 1)
+	signal.Notify(reload, syscall.SIGHUP)
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-reload:
+				fresh, reloadErr := config.LoadNodes(*registryPath)
+				if reloadErr != nil {
+					fmt.Fprintf(os.Stderr, "[node-healing] reload refused, still watching the previous list: %v\n", reloadErr)
+					if journal != nil {
+						_ = journal.Record("reload-refused", map[string]any{"registry": *registryPath})
+					}
+					continue
+				}
+				wd.SetNodes(fresh)
+				fmt.Printf("[node-healing] reloaded %s: watching %d node(s)\n", *registryPath, len(fresh))
+				if journal != nil {
+					_ = journal.Record("reload", map[string]any{"registry": *registryPath, "nodes": len(fresh)})
+				}
+			}
+		}
+	}()
+
 	wd.Run(ctx)
 
 	if journal != nil {

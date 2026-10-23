@@ -8,6 +8,10 @@ import (
 	"fmt"
 )
 
+// EXPERIMENTAL: nothing in the watchdog calls RunRepair or RepairStep. The record callback below is in
+// memory (nil by default), so a crash in the middle of a repair does NOT leave evidence behind; do not
+// rely on that until the record goes to a persistent journal.
+//
 // RepairStep is one automatic repair action. A step that cannot be undone is
 // not allowed to run automatically at all: Reversible must be true and
 // Rollback must be set, otherwise RunRepair refuses the whole plan before
