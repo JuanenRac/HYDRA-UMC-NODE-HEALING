@@ -45,6 +45,7 @@ Se un nodo fallisce a causa di un malfunzionamento dell'hardware o di un'interru
 * 🛡️ **Riavvio morbido:** *(pianificato)* oggi il watchdog non riavvia nulla; segnala soltanto e chiede all'orchestratore di rimettere in coda.
 * 📡 **Avvisi all'operatore:** *(pianificato)* oggi ogni transizione va solo nel journal.
 * 🔁 **Retry limitati + identità del nodo verificata (v0, reale):** un guasto di rete transitorio non fa più passare un nodo a `UNREACHABLE` al primo fallimento - `checkNode` riprova con un backoff esponenziale deterministico e limitato prima di arrendersi; un nodo che risponde ma non riesce ad autoidentificarsi correttamente viene classificato `INVALID` e non viene mai considerato affidabile, ritentato, o riportato come sano.
+* 📓 **Giornale persistente (v0, reale):** con `-journal PERCORSO` ogni transizione, richiesta di recupero e richiesta trattenuta viene scritta anche come riga JSON, concatenata alla precedente con il suo SHA-256 e ruotata per dimensione (`-journal-max-bytes`, `-journal-backups`); dopo un riavvio resta traccia del motivo per cui un nodo è stato riavviato. `-journal-verify` controlla la catena. Disattivato per impostazione predefinita; una riga che non si può scrivere viene segnalata e non ferma mai il watchdog.
 
 ---
 
@@ -158,7 +159,7 @@ go test ./...   # src/config + src/watchdog, round-trip gRPC
 ---
 
 ## 🚀 TABELLA DI MARCIA
-* **Fase 1:** Un diario di audit persistente (JSON Lines) di ogni decisione del riparatore: cosa ha visto, cosa ha chiesto e cosa ne è risultato.
+* **Fase 1:** (fatto, `-journal`) Un giornale persistente in JSON per righe, concatenato con hash, di ogni transizione e richiesta di recupero. Manca: le risposte dell'orchestratore come campi strutturati.
 * **Fase 2:** Una sonda più veloce: un ciclo per nodo con connessioni gRPC persistenti e intestazioni per voce per la sonda HTTP.
 * **Fase 3:** Un'osservabilità propria (un endpoint di metriche) e il ricaricamento del registro dei nodi senza riavvio.
 * **Fase 4:** Un test di contratto contro un vero HYDRA-UMC-SERVER e un lease perché agisca un solo riparatore alla volta.

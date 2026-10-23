@@ -45,6 +45,7 @@ If a node fails due to hardware malfunction or network outage, the Healing Manag
 * 🛡️ **Soft Reboot:** *(planned)* the watchdog never restarts anything today; it only reports and asks the Orchestrator to requeue.
 * 📡 **Operator Alerts:** *(planned)* today every transition goes to the journal only.
 * 🔁 **Bounded Retry + Verified Node Identity (v0, real):** a transient network blip no longer flips a node to `UNREACHABLE` on the first miss - `checkNode` retries with a deterministic, capped exponential backoff before giving up; a node that answers but cannot correctly self-identify is classified `INVALID` and never trusted, retried, or reported healthy.
+* 📓 **Persistent journal (v0, real):** with `-journal PATH` every transition, recovery request and held-back request is also written as one JSON line, each chained to the previous by its SHA-256 and rotated by size (`-journal-max-bytes`, `-journal-backups`), so after a restart there is still a record of why a node was restarted. `-journal-verify` checks the chain. Off by default; a line that cannot be written is reported and never stops the watchdog.
 
 ---
 
@@ -157,7 +158,7 @@ go test ./...   # src/config + src/watchdog, real gRPC round-trips
 ---
 
 ## 🚀 ROADMAP
-* **Phase 1:** A persistent audit journal (JSON lines) of every decision of the healer: what it saw, what it asked and what came of it.
+* **Phase 1:** (done, `-journal`) A persistent, hash-chained JSON-lines journal of every transition and recovery request. Still to come: the decisions of the Orchestrator's answers as structured fields.
 * **Phase 2:** A faster probe: one loop per node with persistent gRPC connections, and headers per entry for the HTTP probe.
 * **Phase 3:** Its own observability (a metrics endpoint) and a reload of the node registry without a restart.
 * **Phase 4:** A contract test against a real HYDRA-UMC-SERVER and a lease so that only one healer acts at a time.

@@ -45,6 +45,7 @@ Si un nodo falla debido a un mal funcionamiento del hardware o una caída de la 
 * 🛡️ **Reinicio Suave:** *(planificado)* hoy el watchdog no reinicia nada; solo informa y pide al Orquestador reencolar.
 * 📡 **Alertas al Operador:** *(planificado)* hoy cada transición va solo al journal.
 * 🔁 **Reintentos Acotados + Identidad de Nodo Verificada (v0, real):** un fallo de red transitorio ya no marca un nodo como `UNREACHABLE` al primer fallo - `checkNode` reintenta con un backoff exponencial determinista y acotado antes de rendirse; un nodo que responde pero no puede autoidentificarse correctamente se clasifica como `INVALID` y nunca se confía en él, se reintenta, ni se reporta como saludable.
+* 📓 **Diario persistente (v0, real):** con `-journal RUTA` cada transición, petición de recuperación y petición retenida se escribe también como una línea JSON, encadenada a la anterior por su SHA-256 y rotada por tamaño (`-journal-max-bytes`, `-journal-backups`), de modo que tras un reinicio queda constancia de por qué se reinició un nodo. `-journal-verify` comprueba la cadena. Desactivado por defecto; una línea que no se puede escribir se informa y nunca detiene al vigilante.
 
 ---
 
@@ -158,7 +159,7 @@ go test ./...   # src/config + src/watchdog, round-trips gRPC
 ---
 
 ## 🚀 HOJA DE RUTA
-* **Fase 1:** Un diario de auditoría persistente (JSON por líneas) de cada decisión del sanador: qué vio, qué pidió y qué resultó.
+* **Fase 1:** (hecho, `-journal`) Un diario persistente en JSON por líneas, encadenado por hash, de cada transición y petición de recuperación. Falta: las respuestas del Orquestador como campos estructurados.
 * **Fase 2:** Un sondeo más rápido: un bucle por nodo con conexiones gRPC persistentes y cabeceras por entrada para el sondeo HTTP.
 * **Fase 3:** Observabilidad propia (un endpoint de métricas) y recarga del registro de nodos sin reiniciar.
 * **Fase 4:** Una prueba de contrato contra un HYDRA-UMC-SERVER real y un arrendamiento (lease) para que solo actúe un sanador a la vez.

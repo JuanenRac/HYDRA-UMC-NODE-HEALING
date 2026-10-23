@@ -45,6 +45,7 @@ Si un nœud échoue en raison d'un dysfonctionnement matériel ou d'une panne de
 * 🛡️ **Redémarrage doux :** *(prévu)* le watchdog ne redémarre rien aujourd'hui ; il signale et demande à l'orchestrateur de remettre en file.
 * 📡 **Alertes opérateur :** *(prévu)* aujourd'hui chaque transition va uniquement au journal.
 * 🔁 **Réessais bornés + identité de nœud vérifiée (v0, réel) :** un incident réseau transitoire ne fait plus basculer un nœud vers `UNREACHABLE` dès le premier échec - `checkNode` réessaie avec un backoff exponentiel déterministe et plafonné avant d'abandonner ; un nœud qui répond mais ne peut pas s'auto-identifier correctement est classé `INVALID` et n'est jamais ni fait confiance, ni réessayé, ni rapporté comme sain.
+* 📓 **Journal persistant (v0, réel) :** avec `-journal CHEMIN`, chaque transition, demande de récupération et demande retenue est aussi écrite comme une ligne JSON, chaînée à la précédente par son SHA-256 et tournée selon la taille (`-journal-max-bytes`, `-journal-backups`) ; après un redémarrage, on sait donc encore pourquoi un nœud a été redémarré. `-journal-verify` vérifie la chaîne. Désactivé par défaut ; une ligne impossible à écrire est signalée et n'arrête jamais le chien de garde.
 
 ---
 
@@ -160,7 +161,7 @@ go test ./...   # src/config + src/watchdog, allers-retours gRPC
 ---
 
 ## 🚀 FEUILLE DE ROUTE
-* **Phase 1 :** Un journal d'audit persistant (JSON Lines) de chaque décision du réparateur : ce qu'il a vu, ce qu'il a demandé et ce qui en est résulté.
+* **Phase 1 :** (fait, `-journal`) Un journal persistant en JSON par lignes, chaîné par hachage, de chaque transition et demande de récupération. Reste : les réponses de l'orchestrateur en champs structurés.
 * **Phase 2 :** Une sonde plus rapide : une boucle par nœud avec des connexions gRPC persistantes et des en-têtes par entrée pour la sonde HTTP.
 * **Phase 3 :** Une observabilité propre (un point d'accès de métriques) et un rechargement du registre des nœuds sans redémarrage.
 * **Phase 4 :** Un test de contrat contre un vrai HYDRA-UMC-SERVER et un bail (lease) pour qu'un seul réparateur agisse à la fois.

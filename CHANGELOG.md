@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **Persistent journal.** `-journal PATH` writes every transition, recovery request and held-back request as one JSON line, each carrying the SHA-256 of the previous one, rotated by size (`-journal-max-bytes`, `-journal-backups`), the chain continuing across files and restarts. `-journal-verify` checks it and says where it breaks. A line that cannot be written is reported and never stops the watchdog. The systemd unit keeps it in its state directory. Off by default.
 - Building no longer changes the version; raising it is the explicit `bump` command (`python tools/hydra_project_tool.py bump`). The build scripts only report the version they built, and CI fails if a build script runs a bump.
 
 ## [0.1.8] - Headers for the health probe and documentation that matches the folders

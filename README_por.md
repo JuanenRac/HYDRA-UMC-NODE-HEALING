@@ -45,6 +45,7 @@ Se um nó falhar por avaria de hardware ou falha de rede, o Healing Manager acio
 * 🛡️ **Reinício suave:** *(planeado)* hoje o watchdog não reinicia nada; apenas reporta e pede ao orquestrador que volte a pôr em fila.
 * 📡 **Alertas ao operador:** *(planeado)* hoje cada transição vai apenas para o journal.
 * 🔁 **Repetição limitada + identidade de nó verificada (v0, real):** uma falha de rede transitória deixa de passar o nó para `UNREACHABLE` à primeira falha - o `checkNode` repete com um backoff exponencial determinístico e limitado antes de desistir; um nó que responde mas não consegue identificar-se corretamente é classificado como `INVALID` e nunca é considerado de confiança, repetido nem dado como saudável.
+* 📓 **Diário persistente (v0, real):** com `-journal CAMINHO` cada transição, pedido de recuperação e pedido retido é também escrito como uma linha JSON, encadeada à anterior pelo seu SHA-256 e rodada por tamanho (`-journal-max-bytes`, `-journal-backups`); depois de um reinício fica registo do motivo pelo qual um nó foi reiniciado. `-journal-verify` verifica a cadeia. Desativado por predefinição; uma linha que não possa ser escrita é comunicada e nunca pára o vigilante.
 
 ---
 
@@ -144,7 +145,7 @@ go test ./...   # src/config + src/watchdog, idas e voltas gRPC reais
 ---
 
 ## 🚀 ROTEIRO
-* **Fase 1:** Um diário de auditoria persistente (JSON por linhas) de cada decisão do reparador: o que viu, o que pediu e o que resultou.
+* **Fase 1:** (feito, `-journal`) Um diário persistente em JSON por linhas, encadeado por hash, de cada transição e pedido de recuperação. Falta: as respostas do orquestrador como campos estruturados.
 * **Fase 2:** Um sondeio mais rápido: um ciclo por nó com ligações gRPC persistentes e cabeçalhos por entrada para o sondeio HTTP.
 * **Fase 3:** Observabilidade própria (um endpoint de métricas) e recarga do registo de nós sem reiniciar.
 * **Fase 4:** Um teste de contrato contra um HYDRA-UMC-SERVER real e um arrendamento (lease) para que só um reparador aja de cada vez.

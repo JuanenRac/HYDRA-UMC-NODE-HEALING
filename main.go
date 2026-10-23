@@ -45,7 +45,33 @@ func main() {
 	startupGrace := flag.Duration("startup-grace", policy.StartupGrace, "no recovery is requested sooner than this after the watchdog starts")
 	cooldown := flag.Duration("recover-cooldown", policy.Cooldown, "minimum time between two recovery requests for the same node")
 	budget := flag.Int("recover-budget", policy.BudgetMax, "most recovery requests per 10 minutes across all nodes; past it the watchdog only logs (0 = unlimited)")
+	journalPath := flag.String("journal", "", "append-only JSONL journal of every transition and recovery request, chained by SHA-256 and rotated by size; empty keeps no journal")
+	journalMaxBytes := flag.Int64("journal-max-bytes", watchdog.DefaultJournalMaxBytes, "size at which the journal is rotated")
+	journalBackups := flag.Int("journal-backups", watchdog.DefaultJournalBackups, "how many rotated journal files are kept")
+	journalVerify := flag.Bool("journal-verify", false, "check the hash chain of the file given with -journal and exit")
 	flag.Parse()
+	var journal *watchdog.Journal
+	if *journalPath != "" {
+		var journalErr error
+		journal, journalErr = watchdog.NewJournal(*journalPath, *journalMaxBytes, *journalBackups)
+		if journalErr != nil {
+			fmt.Fprintf(os.Stderr, "[node-healing] fatal: %v\n", journalErr)
+			os.Exit(1)
+		}
+	}
+	if *journalVerify {
+		if journal == nil {
+			fmt.Fprintln(os.Stderr, "[node-healing] -journal-verify needs -journal PATH")
+			os.Exit(1)
+		}
+		lines, verifyErr := journal.VerifyJournal()
+		if verifyErr != nil {
+			fmt.Printf("JOURNAL_CHAIN=FAIL %v\n", verifyErr)
+			os.Exit(1)
+		}
+		fmt.Printf("JOURNAL_CHAIN=PASS %d line(s), chain intact\n", lines)
+		return
+	}
 	if *orchestratorToken == "" {
 		*orchestratorToken = os.Getenv("ORCHESTRATOR_TOKEN")
 	}
@@ -68,9 +94,17 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	var reactor watchdog.Reactor = watchdog.LogReactor{}
+	var printf func(format string, args ...any) // nil prints to the console only
+	if journal != nil {
+		printf = journal.Printf(nil)
+		if err := journal.Record("start", map[string]any{"version": Version, "nodes": len(nodes), "registry": *registryPath}); err != nil {
+			fmt.Fprintf(os.Stderr, "[node-healing] journal: cannot write %s: %v\n", *journalPath, err)
+		}
+		fmt.Printf("[node-healing] journal: %s\n", *journalPath)
+	}
+	var reactor watchdog.Reactor = watchdog.LogReactor{Printf: printf}
 	if *orchestratorURL != "" {
-		reactor = &watchdog.OrchestratorReactor{BaseURL: *orchestratorURL, Token: *orchestratorToken, Policy: policy, Context: ctx}
+		reactor = &watchdog.OrchestratorReactor{BaseURL: *orchestratorURL, Token: *orchestratorToken, Policy: policy, Context: ctx, Printf: printf}
 		fmt.Printf("[node-healing] recovery requests will be sent to orchestrator at %s only for registry entries with a \"dispatchNode\", after %s down, %s after start-up, at most %d per 10 minutes and one per node every %s\n",
 			*orchestratorURL, policy.ConfirmAfter, policy.StartupGrace, policy.BudgetMax, policy.Cooldown)
 	}
@@ -78,5 +112,8 @@ func main() {
 	wd := watchdog.NewWatchdog(nodes, reactor)
 	wd.Run(ctx)
 
+	if journal != nil {
+		_ = journal.Record("stop", nil)
+	}
 	fmt.Println("[node-healing] shutting down")
 }
