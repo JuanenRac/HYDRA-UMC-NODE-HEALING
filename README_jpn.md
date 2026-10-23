@@ -28,7 +28,7 @@
 |---|---|
 | バージョン | `0.1.8` |
 | 成熟度 | 機能する |
-| テスト | 95 |
+| テスト | 98 |
 | 技術 | Go / gRPC health checks / HTTP health probes |
 | 対象 | HYDRA-UMC セルの Raspberry Pi CM5 |
 | 実機での確認 | まだです：このバージョンについて実機での動作記録はありません |
@@ -50,7 +50,7 @@
 * 🛡️ **ソフトリブート：** *（計画中）* 現在のウォッチドッグは何も再起動しません。報告と、オーケストレーターへの再キュー依頼のみです。
 * 📡 **オペレーター通知：** *（計画中）* 現在はすべての遷移がジャーナルにのみ出力されます。
 * 🔁 **上限付きリトライ + 検証済みノード識別情報（v0、実装済み）：** 一時的なネットワーク障害が発生しても、最初の失敗だけでノードが `UNREACHABLE` になることはもうありません——`checkNode` は決定的で上限のある指数バックオフでリトライしてから諦めます。応答はするが自身を正しく識別できないノードは `INVALID` に分類され、決して信頼されず、リトライもされず、健全と報告されることもありません。
-* 📓 **永続ジャーナル(v0、実装済み):** `-journal パス` を指定すると、すべての状態遷移、復旧要求、保留された要求が JSON 行としても書き込まれ、各行は前の行の SHA-256 で連鎖し、サイズでローテーションされます(`-journal-max-bytes`、`-journal-backups`)。再起動後もノードが再起動された理由の記録が残ります。`-journal-verify` で連鎖を検査します。既定ではオフで、書き込めない行は報告されますがウォッチドッグを止めることはありません。 systemd ユニットは記録を無効にして起動します。有効にするには `/etc/hydra-umc-node-healing/journal.env` に `HYDRA_UMC_NODE_HEALING_JOURNAL_ARGS=--journal /var/lib/hydra-umc-node-healing/journal.jsonl` を書きます(OS インストーラーの `--journal` オプションが書き込みます)。記録やプローブの詳細に入るものはすべて、共有の機密マスキングを通ります。
+* 📓 **永続ジャーナル(v0、実装済み):** `-journal パス` を指定すると、すべての状態遷移、復旧要求、保留された要求が JSON 行としても書き込まれ、各行は前の行の SHA-256 で連鎖し、サイズでローテーションされます(`-journal-max-bytes`、`-journal-backups`)。再起動後もノードが再起動された理由の記録が残ります。`-journal-verify` で連鎖を検査します。既定ではオフで、書き込めない行は報告されますがウォッチドッグを止めることはありません。 systemd ユニットは記録を無効にして起動します。有効にするには `/etc/hydra-umc-node-healing/journal.env` に `HYDRA_UMC_NODE_HEALING_JOURNAL_ARGS=--journal /var/lib/hydra-umc-node-healing/journal.jsonl` を書きます(OS インストーラーの `--journal` オプションが書き込みます)。記録やプローブの詳細に入るものはすべて、共有の機密マスキングを通ります。 `hydra-umc-node-healing -nodes-from-ports パス/contracts/ports.yaml` は、エコシステムのサービス登録簿(ヘルスパスを持つ各サービスを HTTP で監視)からノード登録簿を作って出力し、除外したサービスを一覧表示します。`nodes.json` を手で書く必要はありません。
 
 ---
 

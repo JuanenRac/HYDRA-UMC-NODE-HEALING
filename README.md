@@ -28,7 +28,7 @@
 |---|---|
 | Version | `0.1.8` |
 | Maturity | Functional |
-| Tests | 95 |
+| Tests | 98 |
 | Stack | Go / gRPC health checks / HTTP health probes |
 | Target | The Raspberry Pi CM5 of a HYDRA-UMC cell |
 | On real hardware | Not yet: no run on real hardware is recorded for this version |
@@ -45,7 +45,7 @@ If a node fails due to hardware malfunction or network outage, the Healing Manag
 * 🛡️ **Soft Reboot:** *(planned)* the watchdog never restarts anything today; it only reports and asks the Orchestrator to requeue.
 * 📡 **Operator Alerts:** *(planned)* today every transition goes to the journal only.
 * 🔁 **Bounded Retry + Verified Node Identity (v0, real):** a transient network blip no longer flips a node to `UNREACHABLE` on the first miss - `checkNode` retries with a deterministic, capped exponential backoff before giving up; a node that answers but cannot correctly self-identify is classified `INVALID` and never trusted, retried, or reported healthy.
-* 📓 **Persistent journal (v0, real):** with `-journal PATH` every transition, recovery request and held-back request is also written as one JSON line, each chained to the previous by its SHA-256 and rotated by size (`-journal-max-bytes`, `-journal-backups`), so after a restart there is still a record of why a node was restarted. `-journal-verify` checks the chain. Off by default; a line that cannot be written is reported and never stops the watchdog. The systemd unit starts with the journal off; turn it on by putting `HYDRA_UMC_NODE_HEALING_JOURNAL_ARGS=--journal /var/lib/hydra-umc-node-healing/journal.jsonl` in `/etc/hydra-umc-node-healing/journal.env` (the OS installer's `--journal` option writes it). Whatever reaches the journal or a probe detail passes through the shared secret redaction.
+* 📓 **Persistent journal (v0, real):** with `-journal PATH` every transition, recovery request and held-back request is also written as one JSON line, each chained to the previous by its SHA-256 and rotated by size (`-journal-max-bytes`, `-journal-backups`), so after a restart there is still a record of why a node was restarted. `-journal-verify` checks the chain. Off by default; a line that cannot be written is reported and never stops the watchdog. The systemd unit starts with the journal off; turn it on by putting `HYDRA_UMC_NODE_HEALING_JOURNAL_ARGS=--journal /var/lib/hydra-umc-node-healing/journal.jsonl` in `/etc/hydra-umc-node-healing/journal.env` (the OS installer's `--journal` option writes it). Whatever reaches the journal or a probe detail passes through the shared secret redaction. `hydra-umc-node-healing -nodes-from-ports PATH/contracts/ports.yaml` prints a node registry built from the service registry of the ecosystem (every service with a health path, probed over HTTP) and lists the services it had to leave out, so `nodes.json` need not be typed by hand.
 
 ---
 

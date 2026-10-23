@@ -26,6 +26,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"os/signal"
 	"syscall"
 
@@ -49,7 +50,25 @@ func main() {
 	journalMaxBytes := flag.Int64("journal-max-bytes", watchdog.DefaultJournalMaxBytes, "size at which the journal is rotated")
 	journalBackups := flag.Int("journal-backups", watchdog.DefaultJournalBackups, "how many rotated journal files are kept")
 	journalVerify := flag.Bool("journal-verify", false, "check the hash chain of the file given with -journal and exit")
+	nodesFromPorts := flag.String("nodes-from-ports", "", "print a node registry built from the service registry of the ecosystem (contracts/ports.yaml of the SDK): every service with a health path, probed over HTTP; the services left out are listed on stderr; then exit")
 	flag.Parse()
+	if *nodesFromPorts != "" {
+		text, readErr := os.ReadFile(*nodesFromPorts)
+		if readErr != nil {
+			fmt.Fprintf(os.Stderr, "[node-healing] fatal: %v\n", readErr)
+			os.Exit(1)
+		}
+		registry, skipped, buildErr := config.NodesFromPorts(config.ParsePorts(string(text)))
+		if buildErr != nil {
+			fmt.Fprintf(os.Stderr, "[node-healing] fatal: %v\n", buildErr)
+			os.Exit(1)
+		}
+		fmt.Println(string(registry))
+		if len(skipped) > 0 {
+			fmt.Fprintf(os.Stderr, "[node-healing] left out (no port or no health path in the registry): %s\n", strings.Join(skipped, ", "))
+		}
+		return
+	}
 	var journal *watchdog.Journal
 	if *journalPath != "" {
 		var journalErr error
