@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **Shared secret redaction** (`src/redact`): a Go port of the common module, passing the same 35 shared vectors (`src/redact/testdata/vectors.json`). The journal redacts everything it writes and the detail of an HTTP probe (which can quote what a node answered) is redacted before it is stored or shown. Go's regexp has no look-behind, look-ahead or back-references, so those are done by hand; the one visible difference is that a password inside a URL is only recognised up to 1000 characters.
+- **The journal is off by default in the systemd unit**: the unit reads `HYDRA_UMC_NODE_HEALING_JOURNAL_ARGS` from the optional `/etc/hydra-umc-node-healing/journal.env`; putting `--journal /var/lib/hydra-umc-node-healing/journal.jsonl` there turns it on (the OS installer writes it with `--journal`).
 - **Persistent journal.** `-journal PATH` writes every transition, recovery request and held-back request as one JSON line, each carrying the SHA-256 of the previous one, rotated by size (`-journal-max-bytes`, `-journal-backups`), the chain continuing across files and restarts. `-journal-verify` checks it and says where it breaks. A line that cannot be written is reported and never stops the watchdog. The systemd unit keeps it in its state directory. Off by default.
 - Building no longer changes the version; raising it is the explicit `bump` command (`python tools/hydra_project_tool.py bump`). The build scripts only report the version they built, and CI fails if a build script runs a bump.
 

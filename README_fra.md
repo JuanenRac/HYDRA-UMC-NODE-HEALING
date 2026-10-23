@@ -28,7 +28,7 @@
 |---|---|
 | Version | `0.1.8` |
 | Maturité | Fonctionnel |
-| Tests | 78 |
+| Tests | 95 |
 | Technologie | Go / gRPC health checks / HTTP health probes |
 | Cible | Le Raspberry Pi CM5 d'une cellule HYDRA-UMC |
 | Sur matériel réel | Pas encore : aucune exécution sur du matériel réel n'est consignée pour cette version |
@@ -45,7 +45,7 @@ Si un nœud échoue en raison d'un dysfonctionnement matériel ou d'une panne de
 * 🛡️ **Redémarrage doux :** *(prévu)* le watchdog ne redémarre rien aujourd'hui ; il signale et demande à l'orchestrateur de remettre en file.
 * 📡 **Alertes opérateur :** *(prévu)* aujourd'hui chaque transition va uniquement au journal.
 * 🔁 **Réessais bornés + identité de nœud vérifiée (v0, réel) :** un incident réseau transitoire ne fait plus basculer un nœud vers `UNREACHABLE` dès le premier échec - `checkNode` réessaie avec un backoff exponentiel déterministe et plafonné avant d'abandonner ; un nœud qui répond mais ne peut pas s'auto-identifier correctement est classé `INVALID` et n'est jamais ni fait confiance, ni réessayé, ni rapporté comme sain.
-* 📓 **Journal persistant (v0, réel) :** avec `-journal CHEMIN`, chaque transition, demande de récupération et demande retenue est aussi écrite comme une ligne JSON, chaînée à la précédente par son SHA-256 et tournée selon la taille (`-journal-max-bytes`, `-journal-backups`) ; après un redémarrage, on sait donc encore pourquoi un nœud a été redémarré. `-journal-verify` vérifie la chaîne. Désactivé par défaut ; une ligne impossible à écrire est signalée et n'arrête jamais le chien de garde.
+* 📓 **Journal persistant (v0, réel) :** avec `-journal CHEMIN`, chaque transition, demande de récupération et demande retenue est aussi écrite comme une ligne JSON, chaînée à la précédente par son SHA-256 et tournée selon la taille (`-journal-max-bytes`, `-journal-backups`) ; après un redémarrage, on sait donc encore pourquoi un nœud a été redémarré. `-journal-verify` vérifie la chaîne. Désactivé par défaut ; une ligne impossible à écrire est signalée et n'arrête jamais le chien de garde. L'unité systemd démarre avec le journal désactivé ; on l'active en mettant `HYDRA_UMC_NODE_HEALING_JOURNAL_ARGS=--journal /var/lib/hydra-umc-node-healing/journal.jsonl` dans `/etc/hydra-umc-node-healing/journal.env` (l'option `--journal` de l'installateur de l'OS l'écrit). Tout ce qui arrive au journal ou au détail d'une sonde passe par la rédaction de secrets partagée.
 
 ---
 

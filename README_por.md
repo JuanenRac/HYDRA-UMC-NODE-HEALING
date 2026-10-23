@@ -28,7 +28,7 @@
 |---|---|
 | Versão | `0.1.8` |
 | Maturidade | Funcional |
-| Testes | 78 |
+| Testes | 95 |
 | Tecnologia | Go / gRPC health checks / HTTP health probes |
 | Destino | O Raspberry Pi CM5 de uma célula HYDRA-UMC |
 | Em hardware real | Ainda não: não há registo de execução em hardware real para esta versão |
@@ -45,7 +45,7 @@ Se um nó falhar por avaria de hardware ou falha de rede, o Healing Manager acio
 * 🛡️ **Reinício suave:** *(planeado)* hoje o watchdog não reinicia nada; apenas reporta e pede ao orquestrador que volte a pôr em fila.
 * 📡 **Alertas ao operador:** *(planeado)* hoje cada transição vai apenas para o journal.
 * 🔁 **Repetição limitada + identidade de nó verificada (v0, real):** uma falha de rede transitória deixa de passar o nó para `UNREACHABLE` à primeira falha - o `checkNode` repete com um backoff exponencial determinístico e limitado antes de desistir; um nó que responde mas não consegue identificar-se corretamente é classificado como `INVALID` e nunca é considerado de confiança, repetido nem dado como saudável.
-* 📓 **Diário persistente (v0, real):** com `-journal CAMINHO` cada transição, pedido de recuperação e pedido retido é também escrito como uma linha JSON, encadeada à anterior pelo seu SHA-256 e rodada por tamanho (`-journal-max-bytes`, `-journal-backups`); depois de um reinício fica registo do motivo pelo qual um nó foi reiniciado. `-journal-verify` verifica a cadeia. Desativado por predefinição; uma linha que não possa ser escrita é comunicada e nunca pára o vigilante.
+* 📓 **Diário persistente (v0, real):** com `-journal CAMINHO` cada transição, pedido de recuperação e pedido retido é também escrito como uma linha JSON, encadeada à anterior pelo seu SHA-256 e rodada por tamanho (`-journal-max-bytes`, `-journal-backups`); depois de um reinício fica registo do motivo pelo qual um nó foi reiniciado. `-journal-verify` verifica a cadeia. Desativado por predefinição; uma linha que não possa ser escrita é comunicada e nunca pára o vigilante. A unidade systemd arranca com o registo desativado; ativa-se pondo `HYDRA_UMC_NODE_HEALING_JOURNAL_ARGS=--journal /var/lib/hydra-umc-node-healing/journal.jsonl` em `/etc/hydra-umc-node-healing/journal.env` (a opção `--journal` do instalador do OS escreve-o). Tudo o que chega ao registo ou ao detalhe de uma sonda passa pela redação de segredos partilhada.
 
 ---
 

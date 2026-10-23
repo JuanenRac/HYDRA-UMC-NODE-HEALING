@@ -28,6 +28,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/JuanenRac/hydra-umc-node-healing/src/redact"
 )
 
 // maxProbeBodyBytes bounds what a node can make the watchdog read; a health
@@ -66,7 +68,14 @@ func (w *Watchdog) httpClient() *http.Client {
 	}
 }
 
+// attemptHTTPCheck probes the node and returns what it found; the text goes through the shared secret
+// redaction, because it can quote what the node answered or the error of the connection.
 func (w *Watchdog) attemptHTTPCheck(ctx context.Context, n Node) (status Status, detail string, retryable bool) {
+	status, detail, retryable = w.probeHTTP(ctx, n)
+	return status, redact.Secrets(detail), retryable
+}
+
+func (w *Watchdog) probeHTTP(ctx context.Context, n Node) (status Status, detail string, retryable bool) {
 	reqCtx, cancel := context.WithTimeout(ctx, w.CheckTimeout)
 	defer cancel()
 	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, n.HealthURL, nil)

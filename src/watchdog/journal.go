@@ -28,6 +28,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/JuanenRac/hydra-umc-node-healing/src/redact"
 )
 
 const (
@@ -123,7 +125,8 @@ func (j *Journal) Record(event string, fields map[string]any) error {
 	body := map[string]any{"event": event, "time": now().UTC().Format("2006-01-02T15:04:05Z")}
 	for key, value := range fields {
 		if key != "event" && key != "time" && key != "prev" {
-			body[key] = value
+			// nothing that reaches the journal keeps a secret: the text of a probe can carry whatever a node answered
+			body[key] = redact.JSON(value)
 		}
 	}
 	if err := os.MkdirAll(filepath.Dir(j.Path), 0o750); err != nil {

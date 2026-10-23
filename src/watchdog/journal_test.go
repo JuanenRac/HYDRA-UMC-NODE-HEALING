@@ -160,3 +160,29 @@ func TestNewJournalRefusesBadOptions(t *testing.T) {
 		}
 	}
 }
+
+func TestJournalNeverKeepsASecret(t *testing.T) {
+	journal := newTestJournal(t, DefaultJournalMaxBytes, 2)
+	if err := journal.Record("transition", map[string]any{
+		"detail": "probe said password=hunter2",
+		"log":    []string{"Authorization: Bearer abc.def.ghi"},
+		"nested": map[string]any{"token": "s3cr3t", "ok": "fine"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(journal.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, leaked := range []string{"hunter2", "abc.def.ghi", "s3cr3t"} {
+		if strings.Contains(string(data), leaked) {
+			t.Fatalf("the journal kept %q: %s", leaked, data)
+		}
+	}
+	if !strings.Contains(string(data), "fine") {
+		t.Fatalf("an innocent value was lost: %s", data)
+	}
+	if _, err := journal.VerifyJournal(); err != nil {
+		t.Fatalf("the chain is broken: %v", err)
+	}
+}

@@ -28,7 +28,7 @@
 |---|---|
 | Versione | `0.1.8` |
 | Maturità | Funzionale |
-| Test | 78 |
+| Test | 95 |
 | Tecnologia | Go / gRPC health checks / HTTP health probes |
 | Destinazione | Il Raspberry Pi CM5 di una cella HYDRA-UMC |
 | Su hardware reale | Non ancora: per questa versione non risulta alcuna esecuzione su hardware reale |
@@ -45,7 +45,7 @@ Se un nodo fallisce a causa di un malfunzionamento dell'hardware o di un'interru
 * 🛡️ **Riavvio morbido:** *(pianificato)* oggi il watchdog non riavvia nulla; segnala soltanto e chiede all'orchestratore di rimettere in coda.
 * 📡 **Avvisi all'operatore:** *(pianificato)* oggi ogni transizione va solo nel journal.
 * 🔁 **Retry limitati + identità del nodo verificata (v0, reale):** un guasto di rete transitorio non fa più passare un nodo a `UNREACHABLE` al primo fallimento - `checkNode` riprova con un backoff esponenziale deterministico e limitato prima di arrendersi; un nodo che risponde ma non riesce ad autoidentificarsi correttamente viene classificato `INVALID` e non viene mai considerato affidabile, ritentato, o riportato come sano.
-* 📓 **Giornale persistente (v0, reale):** con `-journal PERCORSO` ogni transizione, richiesta di recupero e richiesta trattenuta viene scritta anche come riga JSON, concatenata alla precedente con il suo SHA-256 e ruotata per dimensione (`-journal-max-bytes`, `-journal-backups`); dopo un riavvio resta traccia del motivo per cui un nodo è stato riavviato. `-journal-verify` controlla la catena. Disattivato per impostazione predefinita; una riga che non si può scrivere viene segnalata e non ferma mai il watchdog.
+* 📓 **Giornale persistente (v0, reale):** con `-journal PERCORSO` ogni transizione, richiesta di recupero e richiesta trattenuta viene scritta anche come riga JSON, concatenata alla precedente con il suo SHA-256 e ruotata per dimensione (`-journal-max-bytes`, `-journal-backups`); dopo un riavvio resta traccia del motivo per cui un nodo è stato riavviato. `-journal-verify` controlla la catena. Disattivato per impostazione predefinita; una riga che non si può scrivere viene segnalata e non ferma mai il watchdog. L'unità systemd parte con il registro disattivato; si attiva mettendo `HYDRA_UMC_NODE_HEALING_JOURNAL_ARGS=--journal /var/lib/hydra-umc-node-healing/journal.jsonl` in `/etc/hydra-umc-node-healing/journal.env` (l'opzione `--journal` dell'installatore dell'OS lo scrive). Tutto ciò che arriva al registro o al dettaglio di una sonda passa dalla redazione dei segreti condivisa.
 
 ---
 

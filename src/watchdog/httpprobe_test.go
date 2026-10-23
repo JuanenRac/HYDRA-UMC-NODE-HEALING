@@ -166,3 +166,17 @@ func TestHTTPProbe_SendsTheHeadersOfTheEntry(t *testing.T) {
 		t.Fatalf("the detail must not carry a header value: %q", detail)
 	}
 }
+
+func TestHTTPProbe_ASecretInTheNodesAnswerNeverReachesTheDetail(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+		_, _ = rw.Write([]byte(`{"status":"degraded","detail":"cannot reach db password=hunter2 token: abcdef123456"}`))
+	}))
+	defer srv.Close()
+	got, detail := probeWatchdog().CheckOnce(context.Background(), Node{Name: "node-a", HealthURL: srv.URL})
+	if got != StatusDegraded {
+		t.Fatalf("status = %s, want degraded", got)
+	}
+	if strings.Contains(detail, "hunter2") || strings.Contains(detail, "abcdef123456") || !strings.Contains(detail, "[REDACTED]") {
+		t.Fatalf("the detail kept a secret: %q", detail)
+	}
+}

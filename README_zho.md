@@ -28,7 +28,7 @@
 |---|---|
 | 版本 | `0.1.8` |
 | 成熟度 | 可用 |
-| 测试 | 78 |
+| 测试 | 95 |
 | 技术栈 | Go / gRPC health checks / HTTP health probes |
 | 目标 | HYDRA-UMC 工作单元的 Raspberry Pi CM5 |
 | 真实硬件 | 尚未：此版本没有在真实硬件上运行的记录 |
@@ -47,7 +47,7 @@
 * 🛡️ **软重启：** *（计划中）* 目前看门狗不会重启任何东西；它只报告并请求编排器重新入队。
 * 📡 **操作员告警：** *（计划中）* 目前所有状态转换只写入日志。
 * 🔁 **限次重试 + 已验证节点身份（v0，真实）：** 一次瞬时网络故障不再让节点在第一次失败时就被判为 `UNREACHABLE`——`checkNode` 会先以确定性的、有上限的指数退避重试，然后才放弃；一个应答了但无法正确自证身份的节点会被分类为 `INVALID`，永远不会被信任、重试或报告为健康。
-* 📓 **持久化日志(v0,已实现):** 使用 `-journal 路径` 后,每次状态转换、恢复请求和被拦下的请求都会同时写成一行 JSON,每行用 SHA-256 与上一行链接,并按大小轮转(`-journal-max-bytes`、`-journal-backups`);重启之后仍能查到某个节点为何被重启。`-journal-verify` 检查链。默认关闭;无法写入的行会被报告,绝不会让看门狗停止。
+* 📓 **持久化日志(v0,已实现):** 使用 `-journal 路径` 后,每次状态转换、恢复请求和被拦下的请求都会同时写成一行 JSON,每行用 SHA-256 与上一行链接,并按大小轮转(`-journal-max-bytes`、`-journal-backups`);重启之后仍能查到某个节点为何被重启。`-journal-verify` 检查链。默认关闭;无法写入的行会被报告,绝不会让看门狗停止。 systemd 单元默认不启用日志；要启用，请在 `/etc/hydra-umc-node-healing/journal.env` 中写入 `HYDRA_UMC_NODE_HEALING_JOURNAL_ARGS=--journal /var/lib/hydra-umc-node-healing/journal.jsonl`（OS 安装器的 `--journal` 选项会写入它）。进入日志或探测详情的所有内容都会经过共享的机密脱敏。
 
 ---
 

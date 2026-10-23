@@ -28,7 +28,7 @@
 |---|---|
 | Version | `0.1.8` |
 | Reifegrad | Funktionsfähig |
-| Tests | 78 |
+| Tests | 95 |
 | Technik | Go / gRPC health checks / HTTP health probes |
 | Ziel | Der Raspberry Pi CM5 einer HYDRA-UMC-Zelle |
 | Auf echter Hardware | Noch nicht: für diese Version ist kein Lauf auf echter Hardware vermerkt |
@@ -45,7 +45,7 @@ Wenn ein Knoten aufgrund einer Hardware-Fehlfunktion oder eines Netzwerkausfalls
 * 🛡️ **Soft-Reboot:** *(geplant)* der Watchdog startet heute nichts neu; er meldet nur und bittet den Orchestrator um Neueinreihung.
 * 📡 **Bedieneralarme:** *(geplant)* heute geht jeder Übergang nur ins Journal.
 * 🔁 **Begrenzte Retries + verifizierte Knotenidentität (v0, echt):** ein vorübergehender Netzwerkausfall kippt einen Knoten nicht mehr beim ersten Fehlschlag auf `UNREACHABLE` - `checkNode` wiederholt mit einem deterministischen, gedeckelten exponentiellen Backoff, bevor es aufgibt; ein Knoten, der antwortet, sich aber nicht korrekt selbst identifizieren kann, wird als `INVALID` klassifiziert und niemals vertraut, wiederholt oder als gesund gemeldet.
-* 📓 **Persistentes Journal (v0, real):** mit `-journal PFAD` wird jeder Übergang, jede Wiederherstellungsanfrage und jede zurückgehaltene Anfrage zusätzlich als JSON-Zeile geschrieben, per SHA-256 mit der vorigen verkettet und nach Größe rotiert (`-journal-max-bytes`, `-journal-backups`); nach einem Neustart bleibt so nachvollziehbar, warum ein Knoten neu gestartet wurde. `-journal-verify` prüft die Kette. Standardmäßig aus; eine nicht schreibbare Zeile wird gemeldet und stoppt den Watchdog nie.
+* 📓 **Persistentes Journal (v0, real):** mit `-journal PFAD` wird jeder Übergang, jede Wiederherstellungsanfrage und jede zurückgehaltene Anfrage zusätzlich als JSON-Zeile geschrieben, per SHA-256 mit der vorigen verkettet und nach Größe rotiert (`-journal-max-bytes`, `-journal-backups`); nach einem Neustart bleibt so nachvollziehbar, warum ein Knoten neu gestartet wurde. `-journal-verify` prüft die Kette. Standardmäßig aus; eine nicht schreibbare Zeile wird gemeldet und stoppt den Watchdog nie. Die systemd-Unit startet mit ausgeschaltetem Journal; eingeschaltet wird es mit `HYDRA_UMC_NODE_HEALING_JOURNAL_ARGS=--journal /var/lib/hydra-umc-node-healing/journal.jsonl` in `/etc/hydra-umc-node-healing/journal.env` (die Option `--journal` des OS-Installers schreibt es). Alles, was ins Journal oder in ein Sondendetail gelangt, läuft durch die gemeinsame Geheimnis-Schwärzung.
 
 ---
 

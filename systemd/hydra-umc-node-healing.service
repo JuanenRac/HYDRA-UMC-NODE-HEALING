@@ -21,8 +21,12 @@
 # --recover-budget change those limits. The token (ORCHESTRATOR_TOKEN) comes
 # from the EnvironmentFile below.
 #
-# --journal keeps an append-only, hash-chained JSON-lines record of every transition and recovery request in
-# the state directory (5 rotated files of 5 MiB); check it with `hydra-umc-node-healing -journal PATH -journal-verify`.
+# The journal is OFF by default. --journal keeps an append-only, hash-chained JSON-lines record of every transition and
+# recovery request in the state directory (5 rotated files of 5 MiB, secrets redacted); check it with
+# `hydra-umc-node-healing -journal PATH -journal-verify`. To turn it on put this line in
+# /etc/hydra-umc-node-healing/journal.env (install_node_healing.sh --journal writes it) and restart the service:
+#   HYDRA_UMC_NODE_HEALING_JOURNAL_ARGS=--journal /var/lib/hydra-umc-node-healing/journal.jsonl
+# An empty or missing file leaves it off.
 #
 # This registry deliberately lives OUTSIDE the shared /etc/hydra-umc/
 # tree (0750 root:hydra-umc-agent) - this service's own unprivileged
@@ -43,7 +47,9 @@ WorkingDirectory=/opt/hydra-umc/node-healing
 # ORCHESTRATOR_TOKEN (the orchestrator requires it once it has one) lives here, read by
 # systemd as root before privileges are dropped; the file is optional
 EnvironmentFile=-/etc/hydra-umc/orchestrator.env
-ExecStart=/opt/hydra-umc/node-healing/hydra-umc-node-healing --nodes /etc/hydra-umc-node-healing/nodes.json --orchestrator-url http://127.0.0.1:8114 --journal /var/lib/hydra-umc-node-healing/journal.jsonl
+# the journal switch (see above); the file is optional
+EnvironmentFile=-/etc/hydra-umc-node-healing/journal.env
+ExecStart=/opt/hydra-umc/node-healing/hydra-umc-node-healing --nodes /etc/hydra-umc-node-healing/nodes.json --orchestrator-url http://127.0.0.1:8114 $HYDRA_UMC_NODE_HEALING_JOURNAL_ARGS
 StateDirectory=hydra-umc-node-healing
 StateDirectoryMode=0750
 Restart=on-failure
