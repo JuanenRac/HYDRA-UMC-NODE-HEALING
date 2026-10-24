@@ -124,7 +124,7 @@ HYDRA-UMC-NODE-HEALING/
 
 ## 🔧 构建与运行
 
-一个真实的看门狗，而不只是一个能编译的骨架：它会通过 gRPC 联系
+一个真实的看门狗，而不只是一个能编译的骨架：它会联系（通过 HTTP 健康 URL，或对带有 `address` 的条目通过 gRPC）
 `nodes.example.json` 中列出的每个节点（或用 `-nodes <路径>` 指向自己的
 注册表），并将状态变化输出到 stdout。
 

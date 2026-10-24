@@ -12,8 +12,7 @@ HEALTHY/DEGRADED/UNHEALTHY/UNREACHABLE/INVALID. A registry entry with an
 `hydra.common.v1` contract); an entry with a `healthUrl` is probed with one
 HTTP `GET` (`src/watchdog/httpprobe.go`) - the way to watch the services of
 this ecosystem, which speak HTTP and do not implement the gRPC service. A
-`Reactor` callback fires
-callback on every state *change* (never every tick). `nodes.example.json` is
+`Reactor` callback fires on every state *change* (never every tick). `nodes.example.json` is
 a local example input; production node inventory must be supplied by an
 authenticated deployment adapter.
 

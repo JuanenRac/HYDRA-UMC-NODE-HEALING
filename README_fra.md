@@ -124,7 +124,7 @@ HYDRA-UMC-NODE-HEALING/
 
 Un vrai watchdog, pas seulement un squelette qui compile : il contacte
 chaque nœud de `nodes.example.json` (ou `-nodes <chemin>` pour pointer
-vers votre propre registre) par gRPC et signale les changements d'état
+vers votre propre registre) (par URL de santé HTTP, ou par gRPC quand l'entrée a une `address`) et signale les changements d'état
 sur stdout.
 
 ```bash

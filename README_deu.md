@@ -124,7 +124,7 @@ Aus der ursprünglichen Vorlage entfernt: `hardware/`, `firmware/`, `os/` und `s
 
 Ein echter Watchdog, nicht nur ein Skelett, das kompiliert: er wählt jeden
 Knoten aus `nodes.example.json` (oder `-nodes <Pfad>` für ein eigenes
-Register) per gRPC an und meldet Zustandsänderungen auf stdout.
+Register) an (per HTTP-Health-URL oder, bei einem Eintrag mit `address`, per gRPC) und meldet Zustandsänderungen auf stdout.
 
 ```bash
 # Windows

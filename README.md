@@ -123,7 +123,7 @@ Pruned from the original template: `hardware/`, `firmware/`, `os/` and `scripts/
 
 A real watchdog, not just a skeleton that compiles: it dials every node in
 `nodes.example.json` (or `-nodes <path>` to point at your own registry)
-over gRPC and reports state changes to stdout.
+(an HTTP health URL, or gRPC when the entry has an `address`) and reports state changes to stdout.
 
 ```bash
 # Windows

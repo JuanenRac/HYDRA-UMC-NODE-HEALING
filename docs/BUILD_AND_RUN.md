@@ -8,11 +8,16 @@ GPL-3.0-or-later - see LICENSE
 
 Run `build-test.bat` or `build-test.sh` first. They execute the deterministic
 Go validation route without changing version or CHANGELOG. `build.bat` and
-`build.sh` are release flows and increment the version before building (the shared build flow of the family).
+`build.sh` only build: they never change the version (`python tools/hydra_project_tool.py bump`
+is the explicit command that raises it).
 
 `run.bat` and `run.sh` are local operator entry points. Use an explicit local
-node inventory and inspect the resulting decision log; do not infer a real
-restart or repair from a simulated recommendation.
+node inventory and read the log of transitions it prints.
+
+With `-orchestrator-url` the watchdog asks HYDRA-UMC-ORCHESTRATOR to requeue the work of a node that stays down, but only
+for an entry that names its `dispatchNode`, and never at once: the node has to stay in its failing state for the confirmation
+time, the first minute after start is a grace period, the same node is asked about at most once every few minutes and a
+budget caps the requests of a flapping network (`RecoveryPolicy`; the flags that tune them are in `-help`).
 
 ## Watching the watchdog
 

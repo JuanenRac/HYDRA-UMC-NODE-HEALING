@@ -122,7 +122,7 @@ Retirado do modelo original: `hardware/`, `firmware/`, `os/` e `scripts/` — es
 
 ## 🔧 GUIA DE COMPILAÇÃO E EXECUÇÃO
 
-Um watchdog real, não apenas um esqueleto que compila: liga-se a cada nó de `nodes.example.json` (ou de `-nodes <caminho>` para apontar ao seu próprio registo) e reporta as mudanças de estado no stdout.
+Um watchdog real, não apenas um esqueleto que compila: liga-se a cada nó de `nodes.example.json` (ou de `-nodes <caminho>` para apontar ao seu próprio registo) (por URL de saúde HTTP ou, se a entrada tiver `address`, por gRPC) e reporta as mudanças de estado no stdout.
 
 ```bash
 # Windows

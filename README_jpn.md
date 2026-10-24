@@ -129,7 +129,7 @@ HYDRA-UMC-NODE-HEALING/
 
 コンパイルできるだけの骨組みではなく、本物のウォッチドッグです：
 `nodes.example.json`（または独自のレジストリを指す `-nodes <パス>`）
-に列挙された各ノードに gRPC で接続し、状態変化を標準出力に報告します。
+に列挙された各ノードに（HTTP のヘルス URL で、`address` を持つ項目は gRPC で）接続し、状態変化を標準出力に報告します。
 
 ```bash
 # Windows

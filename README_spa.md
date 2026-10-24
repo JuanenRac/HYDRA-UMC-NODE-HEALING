@@ -124,7 +124,7 @@ Podado de la plantilla original: `hardware/`, `firmware/`, `os/` y `scripts/` â€
 
 Un watchdog real, no solo un esqueleto que compila: contacta a cada nodo
 de `nodes.example.json` (o `-nodes <ruta>` para apuntar a tu propio
-registro) por gRPC y reporta los cambios de estado por stdout.
+registro) (por URL de salud HTTP o, si la entrada tiene `address`, por gRPC) y reporta los cambios de estado por stdout.
 
 ```bash
 # Windows

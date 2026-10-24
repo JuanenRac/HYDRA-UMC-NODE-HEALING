@@ -124,7 +124,7 @@ Rimossi dal template originale: `hardware/`, `firmware/`, `os/` e `scripts/` —
 
 Un watchdog reale, non solo uno scheletro che compila: contatta ogni nodo
 in `nodes.example.json` (o `-nodes <percorso>` per puntare a un proprio
-registro) via gRPC e riporta i cambi di stato su stdout.
+registro) (via URL di salute HTTP o, se la voce ha un `address`, via gRPC) e riporta i cambi di stato su stdout.
 
 ```bash
 # Windows
