@@ -40,7 +40,7 @@
 Si un nœud échoue en raison d'un dysfonctionnement matériel ou d'une panne de réseau, le gestionnaire de « Healing » déclenche automatiquement un processus de basculement (failover), redirigeant ses missions actives vers d'autres nœuds et avertissant l'opérateur via l'orchestrateur.
 
 ### Caractéristiques principales :
-* 💓 **Battement de santé :** chaque nœud est interrogé toutes les 5 secondes (HealthService gRPC ou URL de santé HTTP) et classé HEALTHY, DEGRADED, UNHEALTHY, UNREACHABLE, INVALID ou MISCONFIGURED ; aucune donnée thermique n'est lue.
+* 💓 **Battement de santé :** chaque nœud est interrogé toutes les 5 secondes (HealthService gRPC ou URL de santé HTTP) et classé HEALTHY, DEGRADED, UNHEALTHY, UNREACHABLE, INVALID ou MISCONFIGURED ; aucune donnée thermique n'est lue. Chaque nœud est interrogé indépendamment : un nœud qui répond lentement ou pas du tout (son interrogation peut durer plus que l'intervalle) ne retarde pas les autres et n'empile pas d'interrogations ; son prochain tick est sauté jusqu'à la fin de l'interrogation en cours.
 * 🔄 **Basculement protégé :** demande à l'orchestrateur de remettre en file les missions d'un nœud qui RESTE en panne (attente de confirmation, grâce au démarrage, délai par nœud et budget global), uniquement pour les entrées du registre qui indiquent leur `dispatchNode`.
 * 🛡️ **Redémarrage doux :** *(prévu)* le watchdog ne redémarre rien aujourd'hui ; il signale et demande à l'orchestrateur de remettre en file.
 * 📡 **Alertes opérateur :** *(prévu)* aujourd'hui chaque transition va uniquement au journal.

@@ -150,6 +150,11 @@ type Watchdog struct {
 	mu    sync.Mutex
 	state map[string]Status // keyed by Node.Name
 	stats map[string]*nodeStats
+	// Nodes whose poll has not finished yet. A tick starts a poll only for the nodes not in it, and does not wait for the
+	// others: a node that answers slowly (or not at all) neither delays the detection of the rest nor piles up polls.
+	polling map[string]bool
+	// Every poll started by Run, so that Run waits for them before it closes the connections.
+	active sync.WaitGroup
 
 	// One gRPC connection per node address, kept between polls: a healthy node is not dialed and torn down
 	// every tick. A connection that fails is dropped, so the next attempt dials from scratch (no reconnect
@@ -182,6 +187,7 @@ func NewWatchdog(nodes []Node, reactor Reactor) *Watchdog {
 		DialOptions:  []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())},
 		state:        make(map[string]Status),
 		stats:        make(map[string]*nodeStats),
+		polling:      make(map[string]bool),
 		conns:        make(map[string]*grpc.ClientConn),
 	}
 }
@@ -268,8 +274,10 @@ func (w *Watchdog) dropConnection(address string, conn *grpc.ClientConn) {
 // call it in its own goroutine (or as main()'s last call, which is what
 // this repo's main.go does).
 func (w *Watchdog) Run(ctx context.Context) {
+	// deferred in this order so that the polls in flight finish (they stop with ctx) before the connections are closed
 	defer w.Close()
-	w.pollAll(ctx)
+	defer w.active.Wait()
+	w.startDue(ctx)
 	ticker := time.NewTicker(w.Interval)
 	defer ticker.Stop()
 	for {
@@ -277,21 +285,49 @@ func (w *Watchdog) Run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			w.pollAll(ctx)
+			w.startDue(ctx)
 		}
 	}
 }
 
-func (w *Watchdog) pollAll(ctx context.Context) {
-	var wg sync.WaitGroup
+// startDue starts a poll of every node whose previous poll has finished and returns a group that is done when those polls are.
+// Run does not wait on it: the ticks of the nodes that answer keep their rhythm whatever a node that does not answer takes
+// (up to RetryPolicy.MaxAttempts times CheckTimeout plus the back-off, which can be longer than Interval). A node still being polled
+// at the next tick is skipped, not queued.
+func (w *Watchdog) startDue(ctx context.Context) *sync.WaitGroup {
+	group := &sync.WaitGroup{}
 	for _, n := range w.currentNodes() {
-		wg.Add(1)
+		w.mu.Lock()
+		if w.polling == nil {
+			w.polling = make(map[string]bool)
+		}
+		busy := w.polling[n.Name]
+		if !busy {
+			w.polling[n.Name] = true
+		}
+		w.mu.Unlock()
+		if busy {
+			continue
+		}
+		group.Add(1)
+		w.active.Add(1)
 		go func(n Node) {
-			defer wg.Done()
+			defer func() {
+				w.mu.Lock()
+				delete(w.polling, n.Name)
+				w.mu.Unlock()
+				w.active.Done()
+				group.Done()
+			}()
 			w.pollOne(ctx, n)
 		}(n)
 	}
-	wg.Wait()
+	return group
+}
+
+// pollAll polls every node once and waits for all of them (what the tests and a one-off check want; Run does not wait).
+func (w *Watchdog) pollAll(ctx context.Context) {
+	w.startDue(ctx).Wait()
 }
 
 func (w *Watchdog) pollOne(ctx context.Context, n Node) {

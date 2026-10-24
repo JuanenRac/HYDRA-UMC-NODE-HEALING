@@ -40,7 +40,7 @@
 Si un nodo falla debido a un mal funcionamiento del hardware o una caída de la red, el Gestor de Healing activa automáticamente un proceso de failover, redirigiendo sus misiones activas a otros nodos y notificando al operador a través del Orquestador.
 
 ### Características Clave:
-* 💓 **Latido de Salud (Heartbeat):** cada nodo se sondea cada 5 segundos (HealthService gRPC o URL de salud HTTP) y se clasifica como HEALTHY, DEGRADED, UNHEALTHY, UNREACHABLE, INVALID o MISCONFIGURED; no se lee ningún dato térmico.
+* 💓 **Latido de Salud (Heartbeat):** cada nodo se sondea cada 5 segundos (HealthService gRPC o URL de salud HTTP) y se clasifica como HEALTHY, DEGRADED, UNHEALTHY, UNREACHABLE, INVALID o MISCONFIGURED; no se lee ningún dato térmico. Cada nodo se sondea por su cuenta: un nodo que responde despacio o no responde (su sondeo puede durar más que el intervalo) ni retrasa a los demás ni acumula sondeos; su siguiente tic se omite hasta que termina el sondeo en curso.
 * 🔄 **Failover con Salvaguardas:** pide al Orquestador reencolar las misiones de un nodo que SIGUE caído (espera de confirmación, gracia de arranque, enfriamiento por nodo y presupuesto global), solo para entradas del registro que indiquen su `dispatchNode`.
 * 🛡️ **Reinicio Suave:** *(planificado)* hoy el watchdog no reinicia nada; solo informa y pide al Orquestador reencolar.
 * 📡 **Alertas al Operador:** *(planificado)* hoy cada transición va solo al journal.

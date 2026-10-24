@@ -40,7 +40,7 @@ O **HYDRA-UMC-NODE-HEALING** é a camada de resiliência do enxame. Monitoriza c
 Se um nó falhar por avaria de hardware ou falha de rede, o Healing Manager aciona automaticamente um processo de failover, redirecionando as suas missões ativas para outros nós e notificando o operador através do Orchestrator.
 
 ### Funcionalidades principais:
-* 💓 **Batimento de saúde:** cada nó é consultado a cada 5 segundos (HealthService gRPC ou URL de saúde HTTP) e classificado como HEALTHY, DEGRADED, UNHEALTHY, UNREACHABLE, INVALID ou MISCONFIGURED; não são lidos dados térmicos.
+* 💓 **Batimento de saúde:** cada nó é consultado a cada 5 segundos (HealthService gRPC ou URL de saúde HTTP) e classificado como HEALTHY, DEGRADED, UNHEALTHY, UNREACHABLE, INVALID ou MISCONFIGURED; não são lidos dados térmicos. Cada nó é consultado por si: um nó que responde devagar ou não responde (a sua consulta pode durar mais do que o intervalo) não atrasa os outros nem acumula consultas; o seu próximo tique é saltado até a consulta em curso terminar.
 * 🔄 **Failover com salvaguardas:** pede ao orquestrador que volte a pôr em fila as missões de um nó que CONTINUA em baixo (espera de confirmação, tolerância no arranque, pausa por nó e orçamento global), apenas para entradas do registo que indiquem o seu `dispatchNode`.
 * 🛡️ **Reinício suave:** *(planeado)* hoje o watchdog não reinicia nada; apenas reporta e pede ao orquestrador que volte a pôr em fila.
 * 📡 **Alertas ao operador:** *(planeado)* hoje cada transição vai apenas para o journal.

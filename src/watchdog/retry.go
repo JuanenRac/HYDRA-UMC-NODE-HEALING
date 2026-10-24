@@ -6,9 +6,11 @@
 // single node within one poll tick. Real network blips (a brief
 // connection refusal while a service is restarting) should not
 // immediately flip a node's classification to UNREACHABLE and fire a
-// Reactor transition - but an open-ended retry loop would risk one slow
-// node stalling pollAll's WaitGroup past the next tick. Bounded attempts
-// with a deterministic, verifiable backoff is the middle ground.
+// Reactor transition - but an open-ended retry loop would keep one slow
+// node busy past the next tick. Bounded attempts with a deterministic,
+// verifiable backoff is the middle ground; and since each node is polled
+// on its own (see Watchdog.startDue), the time a node takes never delays
+// the others.
 package watchdog
 
 import (
@@ -31,10 +33,12 @@ type RetryPolicy struct {
 }
 
 // DefaultRetryPolicy: 3 attempts, 250ms base delay, capped at 2s.
-// Bounded so that the worst case (250ms + 500ms = 750ms of backoff
-// across 3 attempts) stays well under Watchdog's own default 5s poll
-// Interval - a fully-exhausted retry loop for one node must never be
-// able to push a poll tick into overlapping the next one.
+// The backoff alone (250ms + 500ms = 750ms across 3 attempts) is small,
+// but a node that does not answer also costs its CheckTimeout on every
+// attempt: with the default 2s that is up to 3 x 2s + 0.75s = 6.75s, more
+// than the default 5s Interval. That is why a poll that is still running
+// at the next tick is skipped for that node (never queued) and the other
+// nodes are polled on time.
 func DefaultRetryPolicy() RetryPolicy {
 	return RetryPolicy{MaxAttempts: 3, BaseDelay: 250 * time.Millisecond, MaxDelay: 2 * time.Second}
 }

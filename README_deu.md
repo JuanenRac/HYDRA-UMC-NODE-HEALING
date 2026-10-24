@@ -40,7 +40,7 @@
 Wenn ein Knoten aufgrund einer Hardware-Fehlfunktion oder eines Netzwerkausfalls ausfällt, löst der Healing-Manager automatisch einen Failover-Prozess aus, leitet seine aktiven Missionen an andere Knoten weiter und benachrichtigt den Bediener über den Orchestrator.
 
 ### Hauptmerkmale:
-* 💓 **Gesundheits-Heartbeat:** Jeder Knoten wird alle 5 Sekunden abgefragt (gRPC-HealthService oder HTTP-Health-URL) und als HEALTHY, DEGRADED, UNHEALTHY, UNREACHABLE, INVALID oder MISCONFIGURED eingestuft; Temperaturdaten werden nicht gelesen.
+* 💓 **Gesundheits-Heartbeat:** Jeder Knoten wird alle 5 Sekunden abgefragt (gRPC-HealthService oder HTTP-Health-URL) und als HEALTHY, DEGRADED, UNHEALTHY, UNREACHABLE, INVALID oder MISCONFIGURED eingestuft; Temperaturdaten werden nicht gelesen. Jeder Knoten wird für sich abgefragt: Ein Knoten, der langsam oder gar nicht antwortet (seine Abfrage kann länger als das Intervall dauern), hält die anderen nicht auf und staut keine Abfragen an; sein nächster Takt entfällt, bis die laufende Abfrage endet.
 * 🔄 **Abgesichertes Failover:** bittet den Orchestrator, die Missionen eines Knotens neu einzureihen, der AUSGEFALLEN BLEIBT (Bestätigungswartezeit, Startschonfrist, Abkühlzeit pro Knoten und ein globales Budget), nur für Registry-Einträge mit `dispatchNode`.
 * 🛡️ **Soft-Reboot:** *(geplant)* der Watchdog startet heute nichts neu; er meldet nur und bittet den Orchestrator um Neueinreihung.
 * 📡 **Bedieneralarme:** *(geplant)* heute geht jeder Übergang nur ins Journal.

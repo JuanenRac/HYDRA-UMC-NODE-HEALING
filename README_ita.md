@@ -40,7 +40,7 @@
 Se un nodo fallisce a causa di un malfunzionamento dell'hardware o di un'interruzione della rete, l'Healing Manager attiva automaticamente un processo di failover, reindirizzando le sue missioni attive ad altri nodi e notificando l'operatore tramite l'Orchestratore.
 
 ### Caratteristiche principali:
-* 💓 **Heartbeat di salute:** ogni nodo viene interrogato ogni 5 secondi (HealthService gRPC o URL di salute HTTP) e classificato HEALTHY, DEGRADED, UNHEALTHY, UNREACHABLE, INVALID o MISCONFIGURED; non vengono letti dati termici.
+* 💓 **Heartbeat di salute:** ogni nodo viene interrogato ogni 5 secondi (HealthService gRPC o URL di salute HTTP) e classificato HEALTHY, DEGRADED, UNHEALTHY, UNREACHABLE, INVALID o MISCONFIGURED; non vengono letti dati termici. Ogni nodo viene interrogato per conto suo: un nodo che risponde lentamente o per niente (la sua interrogazione può durare più dell'intervallo) non ritarda gli altri né accumula interrogazioni; il suo tick successivo viene saltato finché quella in corso non termina.
 * 🔄 **Failover protetto:** chiede all'orchestratore di rimettere in coda le missioni di un nodo che RESTA inattivo (attesa di conferma, tolleranza all'avvio, pausa per nodo e budget globale), solo per le voci del registro che indicano il loro `dispatchNode`.
 * 🛡️ **Riavvio morbido:** *(pianificato)* oggi il watchdog non riavvia nulla; segnala soltanto e chiede all'orchestratore di rimettere in coda.
 * 📡 **Avvisi all'operatore:** *(pianificato)* oggi ogni transizione va solo nel journal.

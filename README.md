@@ -40,7 +40,7 @@
 If a node fails due to hardware malfunction or network outage, the Healing Manager automatically triggers a failover process, redirecting its active missions to other nodes and notifying the operator via the Orchestrator.
 
 ### Key Features:
-* 💓 **Health Heartbeat:** every node is polled every 5 seconds (gRPC HealthService or HTTP health URL) and classified HEALTHY, DEGRADED, UNHEALTHY, UNREACHABLE, INVALID or MISCONFIGURED; no thermal data is read.
+* 💓 **Health Heartbeat:** every node is polled every 5 seconds (gRPC HealthService or HTTP health URL) and classified HEALTHY, DEGRADED, UNHEALTHY, UNREACHABLE, INVALID or MISCONFIGURED; no thermal data is read. Each node is polled on its own: a node that answers slowly or not at all (its poll can last longer than the interval) neither delays the others nor piles up polls; its next tick is skipped until the running poll ends.
 * 🔄 **Guarded Failover:** asks the Orchestrator to requeue the missions of a node that STAYS down (confirmation wait, start-up grace, per-node cooldown and a global budget), only for registry entries that name their `dispatchNode`.
 * 🛡️ **Soft Reboot:** *(planned)* the watchdog never restarts anything today; it only reports and asks the Orchestrator to requeue.
 * 📡 **Operator Alerts:** *(planned)* today every transition goes to the journal only.

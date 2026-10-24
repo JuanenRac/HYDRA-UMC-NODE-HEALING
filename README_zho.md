@@ -42,7 +42,7 @@
 流程，将其活动任务重新定向到其他节点，并通过编排器通知操作员。
 
 ### 关键特性：
-* 💓 **健康心跳：** 每个节点每 5 秒轮询一次（gRPC HealthService 或 HTTP 健康 URL），并分类为 HEALTHY、DEGRADED、UNHEALTHY、UNREACHABLE、INVALID 或 MISCONFIGURED；不读取温度数据。
+* 💓 **健康心跳：** 每个节点每 5 秒轮询一次（gRPC HealthService 或 HTTP 健康 URL），并分类为 HEALTHY、DEGRADED、UNHEALTHY、UNREACHABLE、INVALID 或 MISCONFIGURED；不读取温度数据。 每个节点单独轮询：响应缓慢或完全不响应的节点（其轮询可能比间隔更长）不会拖慢其他节点，也不会堆积轮询；在正在进行的轮询结束之前，它的下一次触发会被跳过。
 * 🔄 **带保护的故障转移：** 请求编排器将持续停机节点的任务重新入队（确认等待、启动宽限期、每节点冷却时间和全局预算），仅适用于注册表中声明了 `dispatchNode` 的条目。
 * 🛡️ **软重启：** *（计划中）* 目前看门狗不会重启任何东西；它只报告并请求编排器重新入队。
 * 📡 **操作员告警：** *（计划中）* 目前所有状态转换只写入日志。
