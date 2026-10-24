@@ -73,12 +73,13 @@ func TestRun_ANodeThatDoesNotAnswerDoesNotDelayTheOthers(t *testing.T) {
 	if got := checksOf(wd, "silent"); got != 0 {
 		t.Fatalf("the silent node finished %d polls in 600 ms; its first poll should still be running", got)
 	}
-	// and its poll is not queued behind itself: no more than one is ever in flight
+	// and its poll is not queued behind itself: it is still the one first poll, marked as running (the healthy node may
+	// also be mid-poll at the instant of looking, so the size of the set says nothing; TestStartDue covers the skipping)
 	wd.mu.Lock()
-	inFlight := len(wd.polling)
+	silentRunning := wd.polling["silent"]
 	wd.mu.Unlock()
-	if inFlight > 1 {
-		t.Fatalf("%d polls in flight, want at most 1 (the silent node's)", inFlight)
+	if !silentRunning {
+		t.Fatal("the silent node's first poll should still be marked as running")
 	}
 
 	cancel()
