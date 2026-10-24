@@ -105,6 +105,7 @@ HYDRA-UMC-NODE-HEALING/
 │   ├── watchdog/      # Boucle de sondage réelle : dial, Check(), classer,
 │   │                  # réagir uniquement lors d'un changement d'état,
 │   │                  # plus retry.go (RetryPolicy)
+│   ├── redact/        # Masque les formes connues de secrets dans le texte et les valeurs de type JSON (un portage de l'expurgation partagée du SDK, avec ses vecteurs de test)
 │   └── config/        # Chargeur du registre statique de nœuds (JSON)
 ├── build/             # Binaires compilés (sortie de build.sh/build.bat)
 ├── images/            # Médias et diagrammes
@@ -112,11 +113,15 @@ HYDRA-UMC-NODE-HEALING/
 │   └── hydra-umc-node-healing.service # Unité systemd du watchdog sur la CM5 locale
 ├── tools/
 │   ├── build_test.py  # Vérification de build sans versionnage
-│   └── ci_validate.py # Validation manifeste/CHANGELOG/docs utilisée par CI
+│   ├── ci_validate.py # Validation manifeste/CHANGELOG/docs utilisée par CI
+│   ├── _doc_policy.py # Règles de documentation partagées par la famille (copie de celle de HYDRA-UMC-SDK, tenue synchronisée)
+│   ├── _readme_parity.py # Contrôle que les huit README partagent la même structure (copie de celui de HYDRA-UMC-SDK, tenue synchronisée)
+│   └── hydra_project_tool.py # Les mêmes commandes dans chaque dépôt : validate, test, ci, version, status, bump
 ├── nodes.example.json # Registre de nœuds d'exemple (voir src/config)
 ├── go.mod / go.sum    # Définition du module Go
 ├── version.go         # const Version = "X.Y.Z" (go.mod n'a pas ce champ)
 ├── main.go            # Point d'entrée : charge le registre et lance le watchdog
+├── main_test.go       # Le binaire compilé lancé comme le ferait un opérateur (-check-config, le refus d'un point d'état ouvert)
 ├── bump_version.py    # Incrément de version type compteur kilométrique (exécuté seulement par la commande `bump` explicite)
 ├── bump_manifest_version.py # Synchronise la version de hydra-umc.project.json avec la version native (--sync)
 ├── build.sh/.bat      # Valide et compile (compiler ne change jamais la version)

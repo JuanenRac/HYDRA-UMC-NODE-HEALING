@@ -105,6 +105,7 @@ HYDRA-UMC-NODE-HEALING/
 │   ├── watchdog/      # Echte Polling-Schleife: dial, Check(), klassifizieren,
 │   │                  # nur bei Zustandsänderung reagieren, plus
 │   │                  # retry.go (RetryPolicy)
+│   ├── redact/        # Verbirgt bekannte Geheimnisformen in Text und JSON-artigen Werten (ein Port der gemeinsamen Schwärzung des SDK, mit seinen Testvektoren)
 │   └── config/        # Lader für das statische JSON-Knotenregister
 ├── build/             # Kompilierte Binärdateien (Ausgabe von build.sh/.bat)
 ├── images/            # Medien und Diagramme
@@ -112,11 +113,15 @@ HYDRA-UMC-NODE-HEALING/
 │   └── hydra-umc-node-healing.service # systemd-Unit des Watchdogs auf der lokalen CM5
 ├── tools/
 │   ├── build_test.py  # Nicht-versionierender Build-Check
-│   └── ci_validate.py # Manifest/CHANGELOG/Docs-Validierung, von CI genutzt
+│   ├── ci_validate.py # Manifest/CHANGELOG/Docs-Validierung, von CI genutzt
+│   ├── _doc_policy.py # Von der Familie geteilte Dokumentationsregeln (Kopie der von HYDRA-UMC-SDK, synchron gehalten)
+│   ├── _readme_parity.py # Prüfung, dass die acht READMEs dieselbe Struktur haben (Kopie der von HYDRA-UMC-SDK, synchron gehalten)
+│   └── hydra_project_tool.py # Dieselben Befehle in jedem Repository: validate, test, ci, version, status, bump
 ├── nodes.example.json # Beispiel-Knotenregister (siehe src/config)
 ├── go.mod / go.sum    # Go-Modul-Definition
 ├── version.go         # const Version = "X.Y.Z" (go.mod hat kein solches Feld)
 ├── main.go            # Einstiegspunkt: lädt das Register und startet den Watchdog
+├── main_test.go       # Das gebaute Programm so ausgeführt, wie es ein Betreiber täte (-check-config, die Ablehnung eines offenen Status-Endpunkts)
 ├── bump_version.py    # Versionserhöhung im Kilometerzähler-Stil (nur vom expliziten `bump`-Befehl ausgeführt)
 ├── bump_manifest_version.py # Synchronisiert die Version von hydra-umc.project.json mit der nativen (--sync)
 ├── build.sh/.bat      # dann `go build`

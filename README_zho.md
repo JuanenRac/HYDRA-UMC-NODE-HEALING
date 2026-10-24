@@ -107,6 +107,7 @@ HYDRA-UMC-NODE-HEALING/
 │   ├── watchdog/      # 真实的轮询循环：拨号、Check()、分类，
 │   │                  # 仅在状态变化时才作出响应，以及
 │   │                  # retry.go（RetryPolicy）
+│   ├── redact/        # 隐藏文本和类 JSON 值中常见的机密形式 (SDK 共享脱敏的移植,附测试向量)
 │   └── config/        # 静态 JSON 节点注册表加载器
 ├── build/             # 编译后的二进制文件（build.sh/build.bat 的输出）
 ├── images/            # 媒体与图示
@@ -114,11 +115,15 @@ HYDRA-UMC-NODE-HEALING/
 │   └── hydra-umc-node-healing.service # CM5 本地看门狗的 systemd 单元
 ├── tools/
 │   ├── build_test.py  # 不递增版本号的构建检查
-│   └── ci_validate.py # CI 使用的清单/CHANGELOG/文档校验
+│   ├── ci_validate.py # CI 使用的清单/CHANGELOG/文档校验
+│   ├── _doc_policy.py # 家族共享的文档规则 (HYDRA-UMC-SDK 的副本,保持同步)
+│   ├── _readme_parity.py # 检查八个 README 结构一致 (HYDRA-UMC-SDK 的副本,保持同步)
+│   └── hydra_project_tool.py # 每个仓库相同的命令: validate、test、ci、version、status、bump
 ├── nodes.example.json # 示例节点注册表（见 src/config）
 ├── go.mod / go.sum    # Go 模块定义
 ├── version.go         # const Version = "X.Y.Z"（go.mod 没有应用版本字段）
 ├── main.go            # 入口点：加载注册表并启动看门狗
+├── main_test.go       # 像运维人员那样运行已构建的程序 (-check-config、拒绝开放的状态端点)
 ├── bump_version.py    # 里程表式版本递增（仅由显式 `bump` 命令运行）
 ├── bump_manifest_version.py # 将 hydra-umc.project.json 的版本与原生版本同步（--sync）
 ├── build.sh/.bat      # 然后执行 `go build`

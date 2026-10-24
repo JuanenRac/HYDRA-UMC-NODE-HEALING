@@ -105,6 +105,7 @@ HYDRA-UMC-NODE-HEALING/
 │   ├── watchdog/      # Ciclo de sondagem real: ligar, Check(), classificar,
 │   │                  # reagir só quando o estado muda, mais retry.go
 │   │                  # (RetryPolicy) e a sonda HTTP
+│   ├── redact/        # Oculta formas conhecidas de segredos em texto e valores tipo JSON (um port da ocultação partilhada do SDK, com os seus vetores de teste)
 │   └── config/        # Carregador do registo de nós em JSON estático
 ├── build/             # Binários compilados (saída de build.sh/build.bat)
 ├── images/            # Multimédia e diagramas
@@ -112,11 +113,15 @@ HYDRA-UMC-NODE-HEALING/
 │   └── hydra-umc-node-healing.service # Unidade systemd do watchdog local da CM5
 ├── tools/
 │   ├── build_test.py  # Verificação de compilação sem alterar versões
-│   └── ci_validate.py # Validação de manifesto/CHANGELOG/docs usada pelo CI
+│   ├── ci_validate.py # Validação de manifesto/CHANGELOG/docs usada pelo CI
+│   ├── _doc_policy.py # Regras de documentação partilhadas pela família (cópia da de HYDRA-UMC-SDK, mantida em sincronia)
+│   ├── _readme_parity.py # Verificação de que os oito README partilham a mesma estrutura (cópia da de HYDRA-UMC-SDK, mantida em sincronia)
+│   └── hydra_project_tool.py # Os mesmos comandos em todos os repositórios: validate, test, ci, version, status, bump
 ├── nodes.example.json # Registo de nós de exemplo (ver src/config)
 ├── go.mod / go.sum    # Definição do módulo Go
 ├── version.go         # const Version = "X.Y.Z" (o go.mod não tem campo de versão da aplicação)
 ├── main.go            # Ponto de entrada: carrega o registo, executa o watchdog
+├── main_test.go       # O binário compilado executado como um operador o faria (-check-config, a recusa de um endpoint de estado aberto)
 ├── bump_version.py    # Subida de versão ao estilo conta-quilómetros (executada só pelo comando `bump` explícito)
 ├── bump_manifest_version.py # Sincroniza a versão do hydra-umc.project.json com a nativa (--sync)
 ├── build.sh/.bat      # Valida e compila (compilar nunca altera a versão)

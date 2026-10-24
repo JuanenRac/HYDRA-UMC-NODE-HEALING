@@ -104,6 +104,7 @@ HYDRA-UMC-NODE-HEALING/
 │   │                  # for the codegen command)
 │   ├── watchdog/      # Real polling loop: dial, Check(), classify, react
 │   │                  # on state change only, plus retry.go (RetryPolicy)
+│   ├── redact/        # Hides well-known secret shapes in text and JSON-like values (a port of the SDK's shared redaction, with its test vectors)
 │   └── config/        # Static JSON node registry loader
 ├── build/             # Compiled binaries (build.sh/build.bat output)
 ├── images/            # Media and diagrams
@@ -111,11 +112,15 @@ HYDRA-UMC-NODE-HEALING/
 │   └── hydra-umc-node-healing.service # Local CM5 watchdog systemd unit
 ├── tools/
 │   ├── build_test.py  # Non-versioning build/compile check
-│   └── ci_validate.py # Manifest/CHANGELOG/docs validation used by CI
+│   ├── ci_validate.py # Manifest/CHANGELOG/docs validation used by CI
+│   ├── _doc_policy.py # Documentation rules shared by the family (a copy of HYDRA-UMC-SDK's, kept in sync)
+│   ├── _readme_parity.py # Check that the eight READMEs share one structure (a copy of HYDRA-UMC-SDK's, kept in sync)
+│   └── hydra_project_tool.py # The same commands in every repository: validate, test, ci, version, status, bump
 ├── nodes.example.json # Example node registry (see src/config)
 ├── go.mod / go.sum    # Go module definition
 ├── version.go         # const Version = "X.Y.Z" (go.mod has no app version field)
 ├── main.go            # Entry point: loads the registry, runs the watchdog
+├── main_test.go       # The built binary run as an operator would (-check-config, the refusal of an open status endpoint)
 ├── bump_version.py    # Odometer-style version bump (run only by the explicit `bump` command)
 ├── bump_manifest_version.py # Syncs hydra-umc.project.json's version to the native one (--sync)
 ├── build.sh/.bat      # Validate and build (building never changes the version)

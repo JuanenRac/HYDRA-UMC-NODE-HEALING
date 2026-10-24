@@ -110,6 +110,7 @@ HYDRA-UMC-NODE-HEALING/
 │   ├── watchdog/      # 実際のポーリングループ：dial、Check()、分類、
 │   │                  # 状態変化時のみ反応、および retry.go
 │   │                  # (RetryPolicy)
+│   ├── redact/        # テキストや JSON 風の値に含まれる既知の秘密情報の形を隠す (SDK 共通の伏せ字処理の移植、テストベクタ付き)
 │   └── config/        # 静的 JSON ノードレジストリのローダー
 ├── build/             # コンパイル済みバイナリ(build.sh/build.bat の出力)
 ├── images/            # メディアと図版
@@ -117,11 +118,15 @@ HYDRA-UMC-NODE-HEALING/
 │   └── hydra-umc-node-healing.service # CM5 上のローカルウォッチドッグ用 systemd ユニット
 ├── tools/
 │   ├── build_test.py  # バージョンを増やさないビルドチェック
-│   └── ci_validate.py # CI が使用するマニフェスト/CHANGELOG/ドキュメント検証
+│   ├── ci_validate.py # CI が使用するマニフェスト/CHANGELOG/ドキュメント検証
+│   ├── _doc_policy.py # ファミリー共通のドキュメント規則 (HYDRA-UMC-SDK のコピーで、同期を維持)
+│   ├── _readme_parity.py # 8つの README が同じ構造であることの検査 (HYDRA-UMC-SDK のコピーで、同期を維持)
+│   └── hydra_project_tool.py # すべてのリポジトリで共通のコマンド: validate、test、ci、version、status、bump
 ├── nodes.example.json # サンプルノードレジストリ(src/config を参照)
 ├── go.mod / go.sum    # Go モジュール定義
 ├── version.go         # const Version = "X.Y.Z"(go.mod にはアプリバージョンフィールドがありません)
 ├── main.go            # エントリポイント：レジストリを読み込みウォッチドッグを起動
+├── main_test.go       # オペレーターと同じようにビルド済みバイナリを実行 (-check-config、開放されたステータスエンドポイントの拒否)
 ├── bump_version.py    # オドメーター式バージョンインクリメント（明示的な `bump` コマンドのみが実行）
 ├── bump_manifest_version.py # hydra-umc.project.json のバージョンをネイティブ側と同期（--sync）
 ├── build.sh/.bat      # バージョンを増加させ、その後 `go build` を実行

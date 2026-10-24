@@ -105,6 +105,7 @@ HYDRA-UMC-NODE-HEALING/
 │   ├── watchdog/      # Bucle de sondeo real: dial, Check(), clasificar,
 │   │                  # reaccionar solo ante un cambio de estado, más
 │   │                  # retry.go (RetryPolicy)
+│   ├── redact/        # Oculta formas conocidas de secretos en texto y valores tipo JSON (un port de la redacción compartida del SDK, con sus vectores de prueba)
 │   └── config/        # Cargador del registro estático de nodos (JSON)
 ├── build/             # Binarios compilados (salida de build.sh/build.bat)
 ├── images/            # Medios y diagramas
@@ -112,11 +113,15 @@ HYDRA-UMC-NODE-HEALING/
 │   └── hydra-umc-node-healing.service # Unidad systemd del watchdog en la CM5 local
 ├── tools/
 │   ├── build_test.py  # Comprobación de compilación sin versionado
-│   └── ci_validate.py # Validación de manifiesto/CHANGELOG/docs usada por CI
+│   ├── ci_validate.py # Validación de manifiesto/CHANGELOG/docs usada por CI
+│   ├── _doc_policy.py # Reglas de documentación compartidas por la familia (copia de la de HYDRA-UMC-SDK, mantenida en sincronía)
+│   ├── _readme_parity.py # Comprobación de que los ocho README comparten estructura (copia de la de HYDRA-UMC-SDK, mantenida en sincronía)
+│   └── hydra_project_tool.py # Los mismos comandos en todos los repositorios: validate, test, ci, version, status, bump
 ├── nodes.example.json # Registro de nodos de ejemplo (ver src/config)
 ├── go.mod / go.sum    # Definición del módulo Go
 ├── version.go         # const Version = "X.Y.Z" (go.mod no tiene ese campo)
 ├── main.go            # Punto de entrada: carga el registro y arranca el watchdog
+├── main_test.go       # El binario compilado ejecutado como lo haría un operador (-check-config, el rechazo de un endpoint de estado abierto)
 ├── bump_version.py    # Incremento de versión tipo cuentakilómetros (solo lo ejecuta el comando `bump` explícito)
 ├── bump_manifest_version.py # Sincroniza la versión de hydra-umc.project.json con la nativa (--sync)
 ├── build.sh/.bat      # Valida y compila (compilar nunca cambia la versión)
