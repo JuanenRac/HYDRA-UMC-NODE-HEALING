@@ -2,21 +2,35 @@
 
 All notable changes to this project are documented here.
 
-## [Unreleased]
+## [0.1.9] - Every node is polled on its own and a status endpoint for the watchdog itself
+
+### Firmware and protocol
+
+- **Every node is polled on its own.** A tick starts a poll only for the nodes whose previous poll has finished and does not wait for the others, so a node that answers slowly or not at all (up to attempts x check timeout plus the back-off, which can be longer than the interval) no longer delays the detection of the rest, and its polls do not pile up. `Run` still waits for the polls in flight before it closes the connections. The comment of the retry policy now states the real worst case.
+- **Shared secret redaction** (`src/redact`): a Go port of the common module, passing the same 35 shared vectors (`src/redact/testdata/vectors.json`). The journal redacts everything it writes and the detail of an HTTP probe (which can quote what a node answered) is redacted before it is stored or shown. Go's regexp has no look-behind, look-ahead or back-references, so those are done by hand; the one visible difference is that a password inside a URL is only recognised up to 1000 characters.
+
+### Programs and windows
+
+- **The journal is off by default in the systemd unit**: the unit reads `HYDRA_UMC_NODE_HEALING_JOURNAL_ARGS` from the optional `/etc/hydra-umc-node-healing/journal.env`; putting `--journal /var/lib/hydra-umc-node-healing/journal.jsonl` there turns it on (the OS installer writes it with `--journal`).
+
+### Tests, builds and checks
 
 - A contract test against the real HYDRA-UMC-ORCHESTRATOR binary (`HYDRA_UMC_ORCHESTRATOR_BIN`, or the build of the repository next to this one; skipped when there is none): the recovery request the reactor sends requeues the missions of the node that fell and only those, and a wrong token is refused once instead of retried.
-- The build and run guide says what the scripts do now (they never change the version), the recovery safeguards in front of `-orchestrator-url`, and that a node is probed over HTTP or gRPC depending on its entry; the architecture text lost a duplicated phrase; the README says the same in the eight languages.
-- **Every node is polled on its own.** A tick starts a poll only for the nodes whose previous poll has finished and does not wait for the others, so a node that answers slowly or not at all (up to attempts x check timeout plus the back-off, which can be longer than the interval) no longer delays the detection of the rest, and its polls do not pile up. `Run` still waits for the polls in flight before it closes the connections. The comment of the retry policy now states the real worst case.
 - **A status endpoint for the watchdog itself**: `-listen HOST:PORT` serves `GET /health` (liveness: version, uptime, number of nodes, no names) and `GET /metrics` (Prometheus text: the status of every node, last check, check duration, checks, transitions, recovery requests sent). It binds loopback unless `-status-token` / `STATUS_TOKEN` is set, which `/metrics` then demands. Off when `-listen` is empty.
 - **Reload and config check**: `kill -HUP` reads the node registry again; a registry that does not load or validate is refused and the nodes stay as they were, and a node that stays keeps its state (no invented transition). `-check-config` validates the registry given with `-nodes`, prints a summary and exits.
-- **Connections kept between polls**: a gRPC node is polled over one `grpc.NewClient` connection per address instead of dialing and closing every tick (the deprecated `DialContext` / `WithBlock` are gone); a connection that fails is dropped so the next attempt dials from scratch, and the ones of nodes removed by a reload are closed.
-- `RunRepair` / `RepairStep` stay unused by the watchdog: their record callback is in memory, so the claim of evidence that survives a crash does not hold; they are marked experimental in the code.
 - Tests: the status endpoint, the reload, the kept connections (one connection for five polls, a node that goes away and comes back) and the command line (`-check-config`, the open endpoint refused).
 - **The node registry can come from the service registry**: `-nodes-from-ports PATH` reads `contracts/ports.yaml` of the SDK and prints a registry (`name`, `healthUrl`) for every service that has a port and a health path, listing on stderr the ones it leaves out because there is nothing honest to ask them; a test checks that `nodes.example.json` uses the registry ports when the SDK is checked out next to this repository. Tested; never run against the services of a real CM5.
-- **Shared secret redaction** (`src/redact`): a Go port of the common module, passing the same 35 shared vectors (`src/redact/testdata/vectors.json`). The journal redacts everything it writes and the detail of an HTTP probe (which can quote what a node answered) is redacted before it is stored or shown. Go's regexp has no look-behind, look-ahead or back-references, so those are done by hand; the one visible difference is that a password inside a URL is only recognised up to 1000 characters.
-- **The journal is off by default in the systemd unit**: the unit reads `HYDRA_UMC_NODE_HEALING_JOURNAL_ARGS` from the optional `/etc/hydra-umc-node-healing/journal.env`; putting `--journal /var/lib/hydra-umc-node-healing/journal.jsonl` there turns it on (the OS installer writes it with `--journal`).
 - **Persistent journal.** `-journal PATH` writes every transition, recovery request and held-back request as one JSON line, each carrying the SHA-256 of the previous one, rotated by size (`-journal-max-bytes`, `-journal-backups`), the chain continuing across files and restarts. `-journal-verify` checks it and says where it breaks. A line that cannot be written is reported and never stops the watchdog. The systemd unit keeps it in its state directory. Off by default.
 - Building no longer changes the version; raising it is the explicit `bump` command (`python tools/hydra_project_tool.py bump`). The build scripts only report the version they built, and CI fails if a build script runs a bump.
+
+### Documentation
+
+- The build and run guide says what the scripts do now (they never change the version), the recovery safeguards in front of `-orchestrator-url`, and that a node is probed over HTTP or gRPC depending on its entry; the architecture text lost a duplicated phrase; the README says the same in the eight languages.
+
+### Other changes
+
+- **Connections kept between polls**: a gRPC node is polled over one `grpc.NewClient` connection per address instead of dialing and closing every tick (the deprecated `DialContext` / `WithBlock` are gone); a connection that fails is dropped so the next attempt dials from scratch, and the ones of nodes removed by a reload are closed.
+- `RunRepair` / `RepairStep` stay unused by the watchdog: their record callback is in memory, so the claim of evidence that survives a crash does not hold; they are marked experimental in the code.
 
 ## [0.1.8] - Headers for the health probe and documentation that matches the folders
 

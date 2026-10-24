@@ -26,7 +26,7 @@
 
 | | |
 |---|---|
-| 版本 | `0.1.8` |
+| 版本 | `0.1.9` |
 | 成熟度 | 可用 |
 | 测试 | 98 |
 | 技术栈 | Go / gRPC health checks / HTTP health probes |

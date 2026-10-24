@@ -26,7 +26,7 @@
 
 | | |
 |---|---|
-| Version | `0.1.8` |
+| Version | `0.1.9` |
 | Maturity | Functional |
 | Tests | 98 |
 | Stack | Go / gRPC health checks / HTTP health probes |
