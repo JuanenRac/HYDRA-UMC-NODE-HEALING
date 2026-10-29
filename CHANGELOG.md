@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented here.
 
+## [Unreleased]
+
+- CI runs `staticcheck` and fails when `go mod tidy` would change `go.mod` or `go.sum` (both are clean today).
+
 ## [0.1.9] - Every node is polled on its own and a status endpoint for the watchdog itself
 
 ### Firmware and protocol
