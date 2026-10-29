@@ -1,3 +1,9 @@
+<!-- =============================================================================
+HYDRA-UMC-NODE-HEALING - Fleet health watchdog
+Copyright (C) JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
+GPL-3.0-or-later - see LICENSE
+============================================================================= -->
+
 <p align="center">
   <img src="images/HYDRA_UMC_BANNER.svg" alt="HYDRA-UMC-NODE-HEALING banner" width="100%">
 </p>
@@ -9,18 +15,23 @@
 ### 🛡️ 面向 HydraNode 的高可用性监控与故障转移管理器
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Licencia-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
-  <img src="https://img.shields.io/badge/Feature-Self--Healing-green.svg" alt="Self-Healing">
+  <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
+  <img src="https://img.shields.io/badge/Feature-Self--Healing-green.svg" alt="Feature">
   <img src="https://img.shields.io/badge/Platform-Distributed%20Edge-blue.svg" alt="Platform">
+  <img src="https://img.shields.io/badge/Tests-115%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Version-0.1.9-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
 
 ---
 
-**诚实核查 - 今天真正能运行的部分：** 轮询/分类循环(`src/watchdog/watchdog.go`)、有限重试策略(`src/watchdog/retry.go`)、连接到 HYDRA-UMC-ORCHESTRATOR 的真实恢复请求线路(`src/watchdog/orchestrator_reactor.go`),以及静态节点注册表加载器(`src/config/config.go`)都是真实的并经过测试(`src/config` 和 `src/watchdog` 共 78 个测试通过)——而且这些都是真实回环套接字上的真实 gRPC 往返调用，而非模拟客户端。一个已知且已记录的差距：节点注册表是一个静态 JSON 文件(`nodes.json`),而不是对 HYDRA-UMC-SWARM-SYNC 的实时查询，因为那个项目本身也还没有可供查询的真实 API——这是诚实的 v0 版本，而不是假装动态的占位符。将真正在途的任务工作从故障节点重新分配出去，同样不是本仓库的职责——它只通过 `OrchestratorReactor` 请求恢复，到此为止；再往上的一层(真正搬运任务)存在于别处。路线图中的 4 个阶段(数字孪生同步、Isaac Sim 物理集成、自动化恢复模式、AI 驱动的预测性自愈)都是尚无任何代码支撑的愿景性未来工作。具体已交付的内容请见 `CHANGELOG.md`。
+**诚实核查 - 今天真正能运行的部分：** 轮询/分类循环(`src/watchdog/watchdog.go`)、有限重试策略(`src/watchdog/retry.go`)、连接到 HYDRA-UMC-ORCHESTRATOR 的真实恢复请求线路(`src/watchdog/orchestrator_reactor.go`),以及静态节点注册表加载器(`src/config/config.go`)都是真实的并经过测试(`src/config` 和 `src/watchdog` 共 115 个测试通过)——而且这些都是真实回环套接字上的真实 gRPC 往返调用，而非模拟客户端。一个已知且已记录的差距：节点注册表是一个静态 JSON 文件(`nodes.json`),而不是对 HYDRA-UMC-SWARM-SYNC 的实时查询，因为那个项目本身也还没有可供查询的真实 API——这是诚实的 v0 版本，而不是假装动态的占位符。将真正在途的任务工作从故障节点重新分配出去，同样不是本仓库的职责——它只通过 `OrchestratorReactor` 请求恢复，到此为止；再往上的一层(真正搬运任务)存在于别处。路线图中的 4 个阶段(数字孪生同步、Isaac Sim 物理集成、自动化恢复模式、AI 驱动的预测性自愈)都是尚无任何代码支撑的愿景性未来工作。具体已交付的内容请见 `CHANGELOG.md`。
 
 ---
 
 > **安全与安防现状:**本生态系统不是经认证的安全系统。目前尚无硬件 E-STOP 通路,没有由固件强制执行的限位或联锁,也没有经过验证的运动指令;固件映像使用 CRC32 和共享密钥的 HMAC-SHA256 校验,而非非对称签名;TLS 与双向 TLS 均为可选项,默认关闭;自制电路板尚未组装或测试。在依赖此处任何说法来保障人身安全之前,请先阅读[安全基线](https://github.com/JuanenRac/HYDRA-UMC-DOCS/blob/main/docs/SECURITY_BASELINE.md)和[威胁模型](https://github.com/JuanenRac/HYDRA-UMC-DOCS/blob/main/docs/THREAT_MODEL.md)。
+
+---
 
 ## 📋 速览
 
@@ -28,10 +39,12 @@
 |---|---|
 | 版本 | `0.1.9` |
 | 成熟度 | 可用 |
-| 测试 | 98 |
+| 测试 | 115 (`go test ./...`) |
 | 技术栈 | Go / gRPC health checks / HTTP health probes |
 | 目标 | HYDRA-UMC 工作单元的 Raspberry Pi CM5 |
 | 真实硬件 | 尚未：此版本没有在真实硬件上运行的记录 |
+
+**跳转：** [概述](#-概述) · [架构](#-架构) · [快速开始](#-快速开始) · [测试](#-测试) · [仓库结构](#-仓库结构) · [相关项目](#-相关项目)
 
 ## 🚦 项目状态
 
@@ -42,11 +55,11 @@
 | 领域 | 状态 | 在这里的含义 |
 |---|---|---|
 | 软件 | 🟡 | 主要用途可用；上面的诚实性检查列出了仍然缺少的内容 |
-| 测试 | 🟢 | 98 项自动测试，每次变更都会运行 |
+| 测试 | 🟢 | 115 项自动测试，每次变更都会运行 |
 | 真实硬件 | 🔴 | 尚未：此版本没有在真实硬件上运行的记录 |
 | 文档 | 🟢 | 八种语言的 README，每次变更都会与清单核对 |
 
-## 1. 🛠️ 技术概述
+## 🎯 概述
 
 **HYDRA-UMC-NODE-HEALING** 是集群的弹性层。它持续监控所有物理 HydraNode
 （控制器）和逻辑服务的健康状况，确保微工厂零停机运行。
@@ -63,9 +76,18 @@
 * 📓 **持久化日志(v0,已实现):** 使用 `-journal 路径` 后,每次状态转换、恢复请求和被拦下的请求都会同时写成一行 JSON,每行用 SHA-256 与上一行链接,并按大小轮转(`-journal-max-bytes`、`-journal-backups`);重启之后仍能查到某个节点为何被重启。`-journal-verify` 检查链。默认关闭;无法写入的行会被报告,绝不会让看门狗停止。 systemd 单元默认不启用日志；要启用，请在 `/etc/hydra-umc-node-healing/journal.env` 中写入 `HYDRA_UMC_NODE_HEALING_JOURNAL_ARGS=--journal /var/lib/hydra-umc-node-healing/journal.jsonl`（OS 安装器的 `--journal` 选项会写入它）。进入日志或探测详情的所有内容都会经过共享的机密脱敏。 `hydra-umc-node-healing -nodes-from-ports 路径/contracts/ports.yaml` 会根据生态系统的服务登记表（每个有健康路径的服务，通过 HTTP 探测）生成并输出节点登记表，并列出被排除的服务，因此无需手写 `nodes.json`。
 * 📈 **监视看门狗(v0，真实):** 使用 `-listen HOST:PORT` 提供 `GET /health`(存活:版本、运行时间、节点数；不含名称)和 `GET /metrics`(Prometheus：每个节点的状态、最近检查、耗时、检查次数、状态变化次数和恢复请求数)。非回环地址需要 `-status-token`(或 `STATUS_TOKEN`)，在 `/metrics` 上校验。`kill -HUP` 重新读取注册表(未通过校验的会被拒绝，节点保持原样；保留的节点保留其状态)，`-check-config` 校验注册表后退出。健康节点通过在两次探测之间保持的一条 gRPC 连接来探测。已针对替身和本地服务器测试；从未针对真实设备群运行。
 
----
+## 🧩 在 HYDRA-UMC 中的角色
 
-## 2. 🔄 自愈工作流
+**HYDRA-UMC-NODE-HEALING** 是机群的健康看门狗：它通过 HTTP 或 gRPC 轮询每个节点并进行分类，节点消失时请求 `HYDRA-UMC-ORCHESTRATOR` 接管其任务。它只监视和报告，不会重启硬件。
+
+## 🏛️ 架构
+
+<p align="center">
+  <img src="images/architecture.svg" alt="HYDRA-UMC-NODE-HEALING architecture" width="100%">
+</p>
+
+<details>
+<summary>图表的文本版本（Mermaid）</summary>
 
 ```mermaid
 flowchart TB
@@ -78,9 +100,9 @@ flowchart TB
     FAIL --> ORCH["HYDRA-ORCHESTRATOR"]
 ```
 
----
+</details>
 
-## 3. 🧱 架构与设计决策
+### 架构与设计决策
 
 * **为何真正的逻辑位于 `src/` 之下，而非仓库根目录。** `src/healthpb`（生成的 gRPC 存根）、`src/watchdog`（轮询引擎）和 `src/config`（节点注册表加载器）包含实际的实现；`main.go`/`version.go` 仍留在仓库根目录，作为将它们连接在一起的入口点。
 * **为何检测机制与其所保护的编排器相互独立。** 如果一个节点自愈看门狗运行在编排器进程*内部*，它就无法检测到该进程自身发生挂起——作为独立服务运行，才能真正实现"检测无响应节点并重新路由其工作"这一目标，即使无响应的节点正是编排器本身。
@@ -93,54 +115,23 @@ flowchart TB
 
 更多细节参见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)(架构指南)、[`docs/BUILD_AND_RUN.md`](docs/BUILD_AND_RUN.md)(发布构建与测试构建流程)以及 [`docs/INTEGRATION_CONTRACT.md`](docs/INTEGRATION_CONTRACT.md)(未来适配器必须遵循的带版本号健康快照契约)。
 
----
+## 🚀 快速开始
 
-## 📂 目录结构
+需要 Go 1.25 或更高版本。
 
-```text
-HYDRA-UMC-NODE-HEALING/
-├── src/
-│   ├── healthpb/      # 为 hydra.common.v1 生成的 Go 存根
-│   │                  # (取自 HYDRA-UMC-ORCHESTRATOR/proto/
-│   │                  # hydra_common.proto——生成命令见该仓库的
-│   │                  # proto/README.md)
-│   ├── watchdog/      # 真实的轮询循环：拨号、Check()、分类，
-│   │                  # 仅在状态变化时才作出响应，以及
-│   │                  # retry.go（RetryPolicy）
-│   ├── redact/        # 隐藏文本和类 JSON 值中常见的机密形式 (SDK 共享脱敏的移植,附测试向量)
-│   └── config/        # 静态 JSON 节点注册表加载器
-├── build/             # 编译后的二进制文件（build.sh/build.bat 的输出）
-├── images/            # 媒体与图示
-├── systemd/
-│   └── hydra-umc-node-healing.service # CM5 本地看门狗的 systemd 单元
-├── tools/
-│   ├── build_test.py  # 不递增版本号的构建检查
-│   ├── ci_validate.py # CI 使用的清单/CHANGELOG/文档校验
-│   ├── _doc_policy.py # 家族共享的文档规则 (HYDRA-UMC-SDK 的副本,保持同步)
-│   ├── _readme_parity.py # 检查八个 README 结构一致 (HYDRA-UMC-SDK 的副本,保持同步)
-│   └── hydra_project_tool.py # 每个仓库相同的命令: validate、test、ci、version、status、bump
-├── nodes.example.json # 示例节点注册表（见 src/config）
-├── go.mod / go.sum    # Go 模块定义
-├── version.go         # const Version = "X.Y.Z"（go.mod 没有应用版本字段）
-├── main.go            # 入口点：加载注册表并启动看门狗
-├── main_test.go       # 像运维人员那样运行已构建的程序 (-check-config、拒绝开放的状态端点)
-├── bump_version.py    # 里程表式版本递增（仅由显式 `bump` 命令运行）
-├── bump_manifest_version.py # 将 hydra-umc.project.json 的版本与原生版本同步（--sync）
-├── build.sh/.bat      # 然后执行 `go build`
-├── build-test.sh/.bat # 不递增版本号的构建检查
-├── run.sh/.bat        # 运行编译后的二进制文件
-├── docs/
-│   ├── ARCHITECTURE.md
-│   ├── BUILD_AND_RUN.md
-│   └── INTEGRATION_CONTRACT.md
-└── README.md
+```bash
+./build.sh  # Linux, macOS (build.bat on Windows)
+./run.sh -nodes nodes.example.json
+go test ./...
 ```
 
-从原始模板中省略：`hardware/`、`firmware/`、`os/` 和 `scripts/`——这是一个纯软件服务（Go 二进制文件），没有专属硬件或固件，也没有需要维护的操作系统镜像，目前也还没有足以单独设立文件夹的实用脚本内容。
+## 🧪 测试
 
----
+运行 `go test ./...` 会执行 115 个自动测试。 数字为顶层 Go 测试的数量，不含子测试。不需要硬件。
 
-## 🔧 构建与运行
+CI 运行 `HYDRA_UMC_CI=1 python tools/ci_validate.py`，检查清单、文档、八个 README 和图片。
+
+## 🏗️ 构建与发布
 
 一个真实的看门狗，而不只是一个能编译的骨架：它会联系（通过 HTTP 健康 URL，或对带有 `address` 的条目通过 gRPC）
 `nodes.example.json` 中列出的每个节点（或用 `-nodes <路径>` 指向自己的
@@ -175,15 +166,57 @@ go test ./...   # src/config + src/watchdog，基于真实回环套接字
 ```
 制文件。
 
----
+## 📂 仓库结构
 
-## 🚀 路线图
+<p align="center">
+  <img src="images/repository-structure.svg" alt="Repository structure of HYDRA-UMC-NODE-HEALING" width="100%">
+</p>
+
+<details>
+<summary>目录树的文本版本</summary>
+
+```text
+HYDRA-UMC-NODE-HEALING/
+├── tools/                      源代码
+│   ├── build_test.py           不递增版本号的构建检查
+│   ├── ci_validate.py          CI 使用的清单/CHANGELOG/文档校验
+│   ├── _doc_policy.py          家族共享的文档规则 (HYDRA-UMC-SDK 的副本,保持同步)
+│   ├── _readme_parity.py       检查八个 README 结构一致 (HYDRA-UMC-SDK 的副本,保持同步)
+│   └── hydra_project_tool.py   每个仓库相同的命令: validate、test、ci、version、status、bump
+├── src/                        源代码
+├── images/                     媒体与图示
+├── systemd/                    服务单元
+├── docs/                       项目文档
+├── .github/                    CI 工作流和 Issue 模板
+├── nodes.example.json          示例节点登记表
+├── go.mod / go.sum             Go 模块定义
+├── version.go                  const Version = "X.Y.Z"（go.mod 没有应用版本字段）
+├── main.go                     入口点：加载注册表并启动看门狗
+├── main_test.go                像运维人员那样运行已构建的程序 (-check-config、拒绝开放的状态端点)
+├── bump_version.py             显式提升版本
+├── bump_manifest_version.py    将 hydra-umc.project.json 的版本与原生版本同步（--sync）
+├── CHANGELOG.md                每个版本的变更
+├── build-test.sh               不修改内容的构建检查
+├── build.sh                    构建并检查；从不改变版本
+├── hydra-umc.project.json      清单：版本、成熟度、系列
+├── run.sh                      启动程序
+└── test.sh                     运行测试
+```
+
+</details>
+
+## 🗺️ 路线图与已知限制
+
+**当前已知限制**
+
 * **第一阶段：** (已完成,`-journal`)记录每次状态转换和恢复请求的持久化、哈希链接的 JSON Lines 日志。待办:把编排器的回答作为结构化字段记录下来。
 * **第二阶段：** 更快的探测：每个节点一个循环并使用持久的 gRPC 连接，HTTP 探测支持按条目设置请求头。
 * **第三阶段：** 自身的可观测性（指标端点），以及无需重启即可重新加载节点注册表。
 * **第四阶段：** 针对真实 HYDRA-UMC-SERVER 的契约测试，以及保证同一时间只有一个修复器行动的租约（lease）。
 
----
+## 🌍 语言
+
+本 README 和仓库文档提供八种语言：英语、西班牙语、德语、法语、意大利语、日语、中文和葡萄牙语（葡萄牙）。它们同时编写，并由 CI 检查八个文件拥有相同的章节和相同的链接。 本仓库没有自己的界面或消息目录，因此没有需要翻译的界面文字。
 
 ## 🔗 相关项目
 
@@ -276,21 +309,26 @@ go test ./...   # src/config + src/watchdog，基于真实回环套接字
 - **[HYDRA-UMC-OPS-AGENT](https://github.com/JuanenRac/HYDRA-UMC-OPS-AGENT)** — 维护事件协调器：一个低权限的边缘角色采集经过脱敏的库存/健康快照，一个控制面角色以只读方式渲染它，并请求某个 AI 提供方给出诊断建议——从不应用补丁，也从不部署任何内容。
 - **[HYDRA-UMC-DEV-SERVER](https://github.com/JuanenRac/HYDRA-UMC-DEV-SERVER)** — 可复现的开发主机（Raspberry Pi 5 / CM5），保存整个生态系统的源代码，并在持久队列下运行有界的构建/测试任务；这是专用的开发角色，明确区别于运行中的 CM5。
 
+## 📚 文档
 
----
+更多阅读：
 
-## 📚 文档与社区
+* [生态系统的安全基线](https://github.com/JuanenRac/HYDRA-UMC-DOCS/blob/main/docs/SECURITY_BASELINE.md)
+* [生态系统的威胁模型](https://github.com/JuanenRac/HYDRA-UMC-DOCS/blob/main/docs/THREAT_MODEL.md)
+* [本仓库的更新日志](CHANGELOG.md)
+* [本仓库的许可证](LICENSE.md)
 
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** —— 提交 Pull Request 所需的技术栈和编码规范。
-- **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** —— 本社区所期望的行为准则。
-- **[SECURITY.md](SECURITY.md)** —— 如何报告漏洞，以及本项目真实的安全关注重点。
-- **[SUPPORT.md](SUPPORT.md)** —— 在哪里提问和报告缺陷。
-- **[LICENSE.md](LICENSE.md)** —— 本项目自身的许可证。
+## 🤝 参与贡献与社区
+
+* 提交 pull request 之前，请运行 `HYDRA_UMC_CI=1 py -3 tools/ci_validate.py`（或 `HYDRA_UMC_CI=1 python3 tools/ci_validate.py`）：它必须输出 `CI_VALIDATION=PASS`。此检查不要运行 `build.sh` 或 `build.bat`；构建不是检查。
+* 八个 README 由 HYDRA-UMC-DOCS 中的同一个源生成；请勿手工编辑。修改源文件，再用 `tools/make_readmes.py` 重新生成。
+* 不要在 README 中声称尚未运行过的内容：属实时请写“仅模拟”或“尚未在硬件上试过”。
+* 请参阅 [CONTRIBUTING.md](CONTRIBUTING.md)、[行为准则](CODE_OF_CONDUCT.md)、[SECURITY.md](SECURITY.md) 和 [SUPPORT.md](SUPPORT.md)。
 
 ## 👤 作者
-**JuanenRac** (Electro Hobby 3D)
-📧 electrohobby3d@gmail.com
-📺 [youtube.com/@electrohobby3d](https://youtube.com/@electrohobby3d)
+
+**JuanenRac (Electro Hobby 3D)** · electrohobby3d@gmail.com
 
 ## 📜 许可证
-GPL-3.0-or-later —— 详见 LICENSE。
+
+GPL-3.0-or-later - [LICENSE](LICENSE).

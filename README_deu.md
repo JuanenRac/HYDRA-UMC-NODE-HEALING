@@ -1,3 +1,9 @@
+<!-- =============================================================================
+HYDRA-UMC-NODE-HEALING - Fleet health watchdog
+Copyright (C) JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
+GPL-3.0-or-later - see LICENSE
+============================================================================= -->
+
 <p align="center">
   <img src="images/HYDRA_UMC_BANNER.svg" alt="HYDRA-UMC-NODE-HEALING banner" width="100%">
 </p>
@@ -9,18 +15,23 @@
 ### 🛡️ Hochverfügbarkeitsmonitor & Failover-Manager für HydraNodes
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Lizenz-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
-  <img src="https://img.shields.io/badge/Funktion-Self--Healing-green.svg" alt="Self-Healing">
-  <img src="https://img.shields.io/badge/Plattform-Distributed%20Edge-blue.svg" alt="Platform">
+  <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
+  <img src="https://img.shields.io/badge/Feature-Self--Healing-green.svg" alt="Feature">
+  <img src="https://img.shields.io/badge/Platform-Distributed%20Edge-blue.svg" alt="Platform">
+  <img src="https://img.shields.io/badge/Tests-115%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Version-0.1.9-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
 
 ---
 
-**Ehrlichkeitscheck - was heute wirklich läuft:** die Polling-/Klassifizierungsschleife (`src/watchdog/watchdog.go`), die begrenzte Retry-Richtlinie (`src/watchdog/retry.go`), die echte Verdrahtung der Wiederherstellungsanfrage an HYDRA-UMC-ORCHESTRATOR (`src/watchdog/orchestrator_reactor.go`) und der statische Node-Registry-Loader (`src/config/config.go`) sind alle real und getestet (78 bestandene Tests über `src/config` und `src/watchdog`) - und das sind echte gRPC-Roundtrips über echte Loopback-Sockets, kein simulierter Client. Was eine bekannte, dokumentierte Lücke ist: die Node-Registry ist eine statische JSON-Datei (`nodes.json`), keine Live-Abfrage an HYDRA-UMC-SWARM-SYNC, weil auch dieses Projekt noch keine echte API dafür hat - das ist die ehrliche v0, kein Platzhalter, der Dynamik vortäuscht. Auch das Umleiten der tatsächlich laufenden Missionsarbeit weg von einem ausgefallenen Knoten ist nicht die Aufgabe dieses Repositories - es fordert Wiederherstellung über `OrchestratorReactor` an und hört dort auf; die nächste Schicht (Jobs tatsächlich verschieben) liegt anderswo. Die 4 Roadmap-Phasen (Digital-Twin-Synchronisation, Isaac-Sim-Physikintegration, automatisierte Wiederherstellungsmuster, KI-gestützte prädiktive Heilung) sind angestrebte Zukunftsarbeit ohne jeglichen Code dahinter bisher. Siehe `CHANGELOG.md` für das, was bisher genau ausgeliefert wurde.
+**Ehrlichkeitscheck - was heute wirklich läuft:** die Polling-/Klassifizierungsschleife (`src/watchdog/watchdog.go`), die begrenzte Retry-Richtlinie (`src/watchdog/retry.go`), die echte Verdrahtung der Wiederherstellungsanfrage an HYDRA-UMC-ORCHESTRATOR (`src/watchdog/orchestrator_reactor.go`) und der statische Node-Registry-Loader (`src/config/config.go`) sind alle real und getestet (115 bestandene Tests über `src/config` und `src/watchdog`) - und das sind echte gRPC-Roundtrips über echte Loopback-Sockets, kein simulierter Client. Was eine bekannte, dokumentierte Lücke ist: die Node-Registry ist eine statische JSON-Datei (`nodes.json`), keine Live-Abfrage an HYDRA-UMC-SWARM-SYNC, weil auch dieses Projekt noch keine echte API dafür hat - das ist die ehrliche v0, kein Platzhalter, der Dynamik vortäuscht. Auch das Umleiten der tatsächlich laufenden Missionsarbeit weg von einem ausgefallenen Knoten ist nicht die Aufgabe dieses Repositories - es fordert Wiederherstellung über `OrchestratorReactor` an und hört dort auf; die nächste Schicht (Jobs tatsächlich verschieben) liegt anderswo. Die 4 Roadmap-Phasen (Digital-Twin-Synchronisation, Isaac-Sim-Physikintegration, automatisierte Wiederherstellungsmuster, KI-gestützte prädiktive Heilung) sind angestrebte Zukunftsarbeit ohne jeglichen Code dahinter bisher. Siehe `CHANGELOG.md` für das, was bisher genau ausgeliefert wurde.
 
 ---
 
 > **Stand von Sicherheit (Safety) und Security:** Dieses Ökosystem ist kein zertifiziertes Sicherheitssystem. Es gibt noch keinen Hardware-E-STOP-Pfad, keine von der Firmware durchgesetzten Grenzen oder Verriegelungen und keinen verifizierten Bewegungsbefehl; Firmware-Images werden mit CRC32 und einem HMAC-SHA256 mit gemeinsamem Schlüssel geprüft, nicht mit einer asymmetrischen Signatur; TLS und gegenseitiges TLS sind optional und standardmäßig aus; noch keine eigene Platine wurde bestückt oder getestet. Lesen Sie die [Sicherheitsbasis](https://github.com/JuanenRac/HYDRA-UMC-DOCS/blob/main/docs/SECURITY_BASELINE.md) und das [Bedrohungsmodell](https://github.com/JuanenRac/HYDRA-UMC-DOCS/blob/main/docs/THREAT_MODEL.md), bevor Sie sich für die Sicherheit einer Person auf eine Aussage hier verlassen.
+
+---
 
 ## 📋 Auf einen Blick
 
@@ -28,10 +39,12 @@
 |---|---|
 | Version | `0.1.9` |
 | Reifegrad | Funktionsfähig |
-| Tests | 98 |
+| Tests | 115 (`go test ./...`) |
 | Technik | Go / gRPC health checks / HTTP health probes |
 | Ziel | Der Raspberry Pi CM5 einer HYDRA-UMC-Zelle |
 | Auf echter Hardware | Noch nicht: für diese Version ist kein Lauf auf echter Hardware vermerkt |
+
+**Springe zu:** [Überblick](#-überblick) · [Architektur](#-architektur) · [Schnellstart](#-schnellstart) · [Tests](#-tests) · [Struktur des Repositorys](#-struktur-des-repositorys) · [Verwandte Projekte](#-verwandte-projekte)
 
 ## 🚦 Projektstatus
 
@@ -42,11 +55,11 @@ Jede Zeile ist ein Teil dieses Repositorys, und die Ampel sagt, wie weit er heut
 | Bereich | Stand | Was das hier bedeutet |
 |---|---|---|
 | Software | 🟡 | Funktioniert für seinen Hauptzweck; die Ehrlichkeitsprüfung oben nennt, was noch fehlt |
-| Tests | 🟢 | 98 automatische Tests, bei jeder Änderung ausgeführt |
+| Tests | 🟢 | 115 automatische Tests, bei jeder Änderung ausgeführt |
 | Echte Hardware | 🔴 | Noch nicht: für diese Version ist kein Lauf auf echter Hardware vermerkt |
 | Dokumentation | 🟢 | README in acht Sprachen, bei jeder Änderung gegen das Manifest geprüft |
 
-## 1. 🛠️ TECHNISCHER ÜBERBLICK
+## 🎯 Überblick
 
 **HYDRA-UMC-NODE-HEALING** ist die Resilienz-Schicht des Schwarms. Er überwacht kontinuierlich den Zustand aller physischen HydraNodes (Controller) und logischen Dienste und gewährleistet so eine Null-Ausfallzeit in der Micro-Factory.
 
@@ -61,9 +74,18 @@ Wenn ein Knoten aufgrund einer Hardware-Fehlfunktion oder eines Netzwerkausfalls
 * 📓 **Persistentes Journal (v0, real):** mit `-journal PFAD` wird jeder Übergang, jede Wiederherstellungsanfrage und jede zurückgehaltene Anfrage zusätzlich als JSON-Zeile geschrieben, per SHA-256 mit der vorigen verkettet und nach Größe rotiert (`-journal-max-bytes`, `-journal-backups`); nach einem Neustart bleibt so nachvollziehbar, warum ein Knoten neu gestartet wurde. `-journal-verify` prüft die Kette. Standardmäßig aus; eine nicht schreibbare Zeile wird gemeldet und stoppt den Watchdog nie. Die systemd-Unit startet mit ausgeschaltetem Journal; eingeschaltet wird es mit `HYDRA_UMC_NODE_HEALING_JOURNAL_ARGS=--journal /var/lib/hydra-umc-node-healing/journal.jsonl` in `/etc/hydra-umc-node-healing/journal.env` (die Option `--journal` des OS-Installers schreibt es). Alles, was ins Journal oder in ein Sondendetail gelangt, läuft durch die gemeinsame Geheimnis-Schwärzung. `hydra-umc-node-healing -nodes-from-ports PFAD/contracts/ports.yaml` gibt ein Knotenregister aus, das aus dem Dienstregister des Ökosystems gebaut wird (jeder Dienst mit Health-Pfad, per HTTP geprüft), und nennt die ausgelassenen Dienste; `nodes.json` muss so nicht von Hand geschrieben werden.
 * 📈 **Den Wächter überwachen (v0, real):** mit `-listen HOST:PORT` liefert er `GET /health` (Lebenszeichen: Version, Laufzeit, Anzahl der Knoten; keine Namen) und `GET /metrics` (Prometheus: Status jedes Knotens, letzte Prüfung, Dauer, Prüfungen, Übergänge und Wiederherstellungsanfragen). Eine Adresse außerhalb von Loopback verlangt `-status-token` (oder `STATUS_TOKEN`), das bei `/metrics` gefordert wird. `kill -HUP` liest das Register neu ein (ein ungültiges wird abgelehnt und die Knoten bleiben wie sie waren; ein bleibender Knoten behält seinen Zustand), und `-check-config` prüft ein Register und beendet sich. Ein gesunder Knoten wird über eine zwischen den Abfragen gehaltene gRPC-Verbindung geprüft. Gegen Attrappen und einen lokalen Server getestet; nie gegen die echte Flotte.
 
----
+## 🧩 Rolle in HYDRA-UMC
 
-## 2. 🔄 HEALING-WORKFLOW
+**HYDRA-UMC-NODE-HEALING** ist der Gesundheitswächter der Flotte: Er fragt jeden Knoten per HTTP oder gRPC ab, stuft ihn ein und bittet `HYDRA-UMC-ORCHESTRATOR`, seine Missionen zu übernehmen, wenn ein Knoten ausfällt. Er überwacht und meldet; er startet keine Hardware neu.
+
+## 🏛️ Architektur
+
+<p align="center">
+  <img src="images/architecture.svg" alt="HYDRA-UMC-NODE-HEALING architecture" width="100%">
+</p>
+
+<details>
+<summary>Textversion des Diagramms (Mermaid)</summary>
 
 ```mermaid
 flowchart TB
@@ -76,9 +98,9 @@ flowchart TB
     FAIL --> ORCH["HYDRA-ORCHESTRATOR"]
 ```
 
----
+</details>
 
-## 3. 🧱 ARCHITEKTUR & DESIGNENTSCHEIDUNGEN
+### ARCHITEKTUR & DESIGNENTSCHEIDUNGEN
 
 * **Warum die echte Logik unter `src/` liegt, nicht im Repo-Root.** `src/healthpb` (generierte gRPC-Stubs), `src/watchdog` (die Polling-Engine) und `src/config` (der Knotenregister-Lader) enthalten die eigentliche Implementierung; `main.go`/`version.go` bleiben im Repo-Root als der Einstiegspunkt, der sie verbindet.
 * **Warum die Erkennung vom Orchestrator getrennt ist, den sie schützt.** Ein Node-Healing-Watchdog, der INNERHALB des Orchestrator-Prozesses liefe, könnte nicht erkennen, dass genau dieser Prozess hängt - als unabhängiger Dienst zu laufen ist das, was 'einen nicht reagierenden Knoten erkennen und seine Arbeit umleiten' überhaupt erst möglich macht, auch wenn der nicht reagierende Knoten der Orchestrator selbst ist.
@@ -91,54 +113,23 @@ flowchart TB
 
 Für mehr Details siehe [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (Architekturleitfaden), [`docs/BUILD_AND_RUN.md`](docs/BUILD_AND_RUN.md) (Release- vs. Test-Build-Ablauf) und [`docs/INTEGRATION_CONTRACT.md`](docs/INTEGRATION_CONTRACT.md) (der versionierte Health-Snapshot-Vertrag, den ein künftiger Adapter einhalten muss).
 
----
+## 🚀 Schnellstart
 
-## 📂 VERZEICHNISSTRUKTUR
+Benötigt Go 1.25 oder neuer.
 
-```text
-HYDRA-UMC-NODE-HEALING/
-├── src/
-│   ├── healthpb/      # Generierte Go-Stubs für hydra.common.v1
-│   │                  # (übernommen aus HYDRA-UMC-ORCHESTRATOR/proto/
-│   │                  # hydra_common.proto - siehe proto/README.md
-│   │                  # dieses Repos für den Codegen-Befehl)
-│   ├── watchdog/      # Echte Polling-Schleife: dial, Check(), klassifizieren,
-│   │                  # nur bei Zustandsänderung reagieren, plus
-│   │                  # retry.go (RetryPolicy)
-│   ├── redact/        # Verbirgt bekannte Geheimnisformen in Text und JSON-artigen Werten (ein Port der gemeinsamen Schwärzung des SDK, mit seinen Testvektoren)
-│   └── config/        # Lader für das statische JSON-Knotenregister
-├── build/             # Kompilierte Binärdateien (Ausgabe von build.sh/.bat)
-├── images/            # Medien und Diagramme
-├── systemd/
-│   └── hydra-umc-node-healing.service # systemd-Unit des Watchdogs auf der lokalen CM5
-├── tools/
-│   ├── build_test.py  # Nicht-versionierender Build-Check
-│   ├── ci_validate.py # Manifest/CHANGELOG/Docs-Validierung, von CI genutzt
-│   ├── _doc_policy.py # Von der Familie geteilte Dokumentationsregeln (Kopie der von HYDRA-UMC-SDK, synchron gehalten)
-│   ├── _readme_parity.py # Prüfung, dass die acht READMEs dieselbe Struktur haben (Kopie der von HYDRA-UMC-SDK, synchron gehalten)
-│   └── hydra_project_tool.py # Dieselben Befehle in jedem Repository: validate, test, ci, version, status, bump
-├── nodes.example.json # Beispiel-Knotenregister (siehe src/config)
-├── go.mod / go.sum    # Go-Modul-Definition
-├── version.go         # const Version = "X.Y.Z" (go.mod hat kein solches Feld)
-├── main.go            # Einstiegspunkt: lädt das Register und startet den Watchdog
-├── main_test.go       # Das gebaute Programm so ausgeführt, wie es ein Betreiber täte (-check-config, die Ablehnung eines offenen Status-Endpunkts)
-├── bump_version.py    # Versionserhöhung im Kilometerzähler-Stil (nur vom expliziten `bump`-Befehl ausgeführt)
-├── bump_manifest_version.py # Synchronisiert die Version von hydra-umc.project.json mit der nativen (--sync)
-├── build.sh/.bat      # dann `go build`
-├── build-test.sh/.bat # Nicht-versionierender Build-Check
-├── run.sh/.bat        # Führt die kompilierte Binärdatei aus
-├── docs/
-│   ├── ARCHITECTURE.md
-│   ├── BUILD_AND_RUN.md
-│   └── INTEGRATION_CONTRACT.md
-└── README.md
+```bash
+./build.sh  # Linux, macOS (build.bat on Windows)
+./run.sh -nodes nodes.example.json
+go test ./...
 ```
 
-Aus der ursprünglichen Vorlage entfernt: `hardware/`, `firmware/`, `os/` und `scripts/` — dies ist ein reiner Softwaredienst (Go-Binärdatei) ohne eigene Hardware oder Firmware, ohne zu pflegendes Betriebssystem-Image und ohne Utility-Skript-Inhalt, der bislang einen eigenen Ordner rechtfertigen würde.
+## 🧪 Tests
 
----
+115 automatische Tests laufen mit `go test ./...`. Jede Zahl ist ein Go-Test der obersten Ebene; Untertests werden nicht addiert. Sie brauchen keine Hardware.
 
-## 🔧 BUILD UND AUSFÜHRUNG
+Die CI führt `HYDRA_UMC_CI=1 python tools/ci_validate.py` aus; das prüft das Manifest, die Dokumente, die acht READMEs und die Bilder.
+
+## 🏗️ Build und Veröffentlichung
 
 Ein echter Watchdog, nicht nur ein Skelett, das kompiliert: er wählt jeden
 Knoten aus `nodes.example.json` (oder `-nodes <Pfad>` für ein eigenes
@@ -176,15 +167,57 @@ go test ./...   # src/config + src/watchdog, echte gRPC-Roundtrips
                  # über echte Loopback-Sockets, ohne simulierten Client
 ```
 
----
+## 📂 Struktur des Repositorys
 
-## 🚀 FAHRPLAN
+<p align="center">
+  <img src="images/repository-structure.svg" alt="Repository structure of HYDRA-UMC-NODE-HEALING" width="100%">
+</p>
+
+<details>
+<summary>Textversion des Baums</summary>
+
+```text
+HYDRA-UMC-NODE-HEALING/
+├── tools/                      Quellcode
+│   ├── build_test.py           Nicht-versionierender Build-Check
+│   ├── ci_validate.py          Manifest/CHANGELOG/Docs-Validierung, von CI genutzt
+│   ├── _doc_policy.py          Von der Familie geteilte Dokumentationsregeln (Kopie der von HYDRA-UMC-SDK, synchron gehalten)
+│   ├── _readme_parity.py       Prüfung, dass die acht READMEs dieselbe Struktur haben (Kopie der von HYDRA-UMC-SDK, synchron gehalten)
+│   └── hydra_project_tool.py   Dieselben Befehle in jedem Repository: validate, test, ci, version, status, bump
+├── src/                        Quellcode
+├── images/                     Medien und Diagramme
+├── systemd/                    Dienst-Unit
+├── docs/                       Dokumente des Projekts
+├── .github/                    CI-Workflow und Issue-Vorlagen
+├── nodes.example.json          Beispiel-Knotenregister
+├── go.mod / go.sum             Go-Modul-Definition
+├── version.go                  const Version = "X.Y.Z" (go.mod hat kein solches Feld)
+├── main.go                     Einstiegspunkt: lädt das Register und startet den Watchdog
+├── main_test.go                Das gebaute Programm so ausgeführt, wie es ein Betreiber täte (-check-config, die Ablehnung eines offenen Status-Endpunkts)
+├── bump_version.py             ausdrückliche Versionserhöhung
+├── bump_manifest_version.py    Synchronisiert die Version von hydra-umc.project.json mit der nativen (--sync)
+├── CHANGELOG.md                was sich in jeder Version geändert hat
+├── build-test.sh               Build-Prüfung ohne Änderungen
+├── build.sh                    baut und prüft; ändert nie die Version
+├── hydra-umc.project.json      Manifest: Version, Reifegrad, Familie
+├── run.sh                      startet das Programm
+└── test.sh                     führt die Tests aus
+```
+
+</details>
+
+## 🗺️ Roadmap und bekannte Grenzen
+
+**Bekannte Grenzen heute**
+
 * **Phase 1:** (erledigt, `-journal`) Ein persistentes, per Hash verkettetes JSON-Lines-Journal jedes Übergangs und jeder Wiederherstellungsanfrage. Offen: die Antworten des Orchestrators als strukturierte Felder.
 * **Phase 2:** Eine schnellere Prüfung: eine Schleife pro Knoten mit dauerhaften gRPC-Verbindungen und Header pro Eintrag für die HTTP-Prüfung.
 * **Phase 3:** Eigene Beobachtbarkeit (ein Metrik-Endpunkt) und ein Neuladen des Knotenregisters ohne Neustart.
 * **Phase 4:** Ein Vertragstest gegen einen echten HYDRA-UMC-SERVER und ein Lease, damit immer nur ein Healer handelt.
 
----
+## 🌍 Sprachen
+
+Diese README und die Dokumente des Repositorys gibt es in acht Sprachen: Englisch, Spanisch, Deutsch, Französisch, Italienisch, Japanisch, Chinesisch und Portugiesisch (Portugal). Sie entstehen gemeinsam, und die CI prüft, dass die acht Dateien dieselben Abschnitte und dieselben Links haben. Dieses Repository hat weder eine eigene Oberfläche noch einen eigenen Meldungskatalog, es gibt also keine Oberflächentexte zu übersetzen.
 
 ## 🔗 Verwandte Projekte
 
@@ -277,21 +310,26 @@ Dieses Projekt ist Teil des HYDRA-UMC-Robotik-Ökosystems desselben Autors (Juan
 - **[HYDRA-UMC-OPS-AGENT](https://github.com/JuanenRac/HYDRA-UMC-OPS-AGENT)** — Wartungsvorfall-Koordinator: eine Edge-Rolle mit niedrigem Privileg sammelt einen bereinigten Inventar-/Gesundheits-Snapshot, eine Control-Plane-Rolle rendert ihn schreibgeschützt und bittet einen KI-Anbieter um einen Diagnosevorschlag - wendet nie einen Patch an und stellt nie etwas bereit.
 - **[HYDRA-UMC-DEV-SERVER](https://github.com/JuanenRac/HYDRA-UMC-DEV-SERVER)** — reproduzierbarer Entwicklungshost (Raspberry Pi 5 / CM5), der den Quellcode des Ökosystems vorhält und begrenzte Build-/Test-Aufgaben über eine dauerhafte Warteschlange ausführt; eine dedizierte Entwicklerrolle, ausdrücklich kein operativer CM5.
 
+## 📚 Dokumentation
 
----
+Hier steht mehr:
 
-## 📚 Dokumentation & Community
+* [Sicherheitsgrundlage des Ökosystems](https://github.com/JuanenRac/HYDRA-UMC-DOCS/blob/main/docs/SECURITY_BASELINE.md)
+* [Bedrohungsmodell des Ökosystems](https://github.com/JuanenRac/HYDRA-UMC-DOCS/blob/main/docs/THREAT_MODEL.md)
+* [Änderungsprotokoll dieses Repositorys](CHANGELOG.md)
+* [Lizenz dieses Repositorys](LICENSE.md)
 
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** — Technologie-Stack und Coding-Richtlinien für einen Pull Request.
-- **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** — die in dieser Community erwarteten Verhaltensstandards.
-- **[SECURITY.md](SECURITY.md)** — wie man eine Schwachstelle meldet, und die echten Sicherheitsschwerpunkte dieses Projekts.
-- **[SUPPORT.md](SUPPORT.md)** — wo man Fragen stellt und Fehler meldet.
-- **[LICENSE.md](LICENSE.md)** — die eigene Lizenz dieses Projekts.
+## 🤝 Mitwirken und Community
+
+* Führe vor einem Pull Request `HYDRA_UMC_CI=1 py -3 tools/ci_validate.py` (oder `HYDRA_UMC_CI=1 python3 tools/ci_validate.py`) aus: Es muss `CI_VALIDATION=PASS` ausgeben. Führe dafür nicht `build.sh` oder `build.bat` aus; Bauen ist keine Prüfung.
+* Die acht READMEs entstehen aus einer einzigen Quelle in HYDRA-UMC-DOCS; bearbeite sie nicht von Hand. Ändere die Quelle und schreibe sie mit `tools/make_readmes.py` neu.
+* Behaupte in einer README nichts, was nicht gelaufen ist: Schreibe „simuliert“ oder „nicht auf Hardware erprobt“, wo das stimmt.
+* Siehe [CONTRIBUTING.md](CONTRIBUTING.md), den [Verhaltenskodex](CODE_OF_CONDUCT.md), [SECURITY.md](SECURITY.md) und [SUPPORT.md](SUPPORT.md).
 
 ## 👤 AUTOR
-**JuanenRac** (Electro Hobby 3D)
-📧 electrohobby3d@gmail.com
-📺 [youtube.com/@electrohobby3d](https://youtube.com/@electrohobby3d)
+
+**JuanenRac (Electro Hobby 3D)** · electrohobby3d@gmail.com
 
 ## 📜 LIZENZ
-GPL-3.0-or-later - Siehe LICENSE für Details.
+
+GPL-3.0-or-later - [LICENSE](LICENSE).

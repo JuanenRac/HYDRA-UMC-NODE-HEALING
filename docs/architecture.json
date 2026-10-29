@@ -1,0 +1,151 @@
+{
+  "repo": "HYDRA-UMC-NODE-HEALING",
+  "ecosystem": "hydra",
+  "tagline": "Poll every node, classify it, retry with backoff, and tell the orchestrator.",
+  "description": "HYDRA-UMC-NODE-HEALING reads a node registry, probes each node over HTTP or gRPC with retry and backoff, keeps a journal of state changes and reports an unreachable node to the orchestrator.",
+  "columns": [
+    "WHO USES IT",
+    "THIS REPOSITORY",
+    "WHAT IT WATCHES"
+  ],
+  "nodes": [
+    {
+      "id": "op",
+      "column": 0,
+      "level": "external",
+      "title": "The operator",
+      "lines": [
+        "reads state changes",
+        "on standard output"
+      ]
+    },
+    {
+      "id": "orc",
+      "column": 0,
+      "level": "external",
+      "title": "ORCHESTRATOR",
+      "lines": [
+        "asked to recover the",
+        "missions of a lost node"
+      ]
+    },
+    {
+      "id": "reg",
+      "column": 2,
+      "level": "config",
+      "title": "Node registry",
+      "lines": [
+        "nodes.example.json: URL or",
+        "gRPC address per node"
+      ],
+      "code": [
+        "src/config/config.go"
+      ]
+    },
+    {
+      "id": "nodes",
+      "column": 2,
+      "level": "external",
+      "title": "HYDRA nodes",
+      "lines": [
+        "and the services of",
+        "the ecosystem"
+      ]
+    },
+    {
+      "id": "wd",
+      "column": 1,
+      "level": "tested",
+      "title": "watchdog.go",
+      "lines": [
+        "poll loop and classification",
+        "HEALTHY ... UNREACHABLE"
+      ],
+      "code": [
+        "src/watchdog/watchdog.go",
+        "src/watchdog/status.go"
+      ]
+    },
+    {
+      "id": "react",
+      "column": 1,
+      "level": "tested",
+      "title": "orchestrator_reactor.go",
+      "lines": [
+        "tells the orchestrator",
+        "a node is unreachable"
+      ],
+      "code": [
+        "src/watchdog/orchestrator_reactor.go"
+      ]
+    },
+    {
+      "id": "probe",
+      "column": 1,
+      "level": "tested",
+      "title": "httpprobe.go",
+      "lines": [
+        "HTTP health URL probe;",
+        "gRPC when an address is given"
+      ],
+      "code": [
+        "src/watchdog/httpprobe.go"
+      ]
+    },
+    {
+      "id": "retry",
+      "column": 1,
+      "level": "tested",
+      "title": "retry.go",
+      "lines": [
+        "retry with backoff;",
+        "identity-mismatch detection"
+      ],
+      "code": [
+        "src/watchdog/retry.go"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "wd",
+      "to": "op",
+      "level": "tested",
+      "label": "report"
+    },
+    {
+      "from": "react",
+      "to": "orc",
+      "level": "external",
+      "label": "alert"
+    },
+    {
+      "from": "wd",
+      "to": "probe",
+      "level": "tested"
+    },
+    {
+      "from": "probe",
+      "to": "nodes",
+      "level": "external",
+      "label": "probe"
+    },
+    {
+      "from": "probe",
+      "to": "retry",
+      "level": "tested"
+    },
+    {
+      "from": "wd",
+      "to": "react",
+      "level": "tested"
+    },
+    {
+      "from": "reg",
+      "to": "wd",
+      "level": "config",
+      "label": "nodes"
+    }
+  ],
+  "footer": "Tried against local test servers; never against a fleet of real nodes."
+}
