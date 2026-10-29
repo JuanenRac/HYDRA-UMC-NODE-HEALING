@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	healthpb "github.com/JuanenRac/hydra-umc-node-healing/src/healthpb"
+	healthpb "github.com/JuanenRac/HYDRA-UMC-NODE-HEALING/src/healthpb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

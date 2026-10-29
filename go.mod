@@ -1,4 +1,4 @@
-module github.com/JuanenRac/hydra-umc-node-healing
+module github.com/JuanenRac/HYDRA-UMC-NODE-HEALING
 
 go 1.25.0
 

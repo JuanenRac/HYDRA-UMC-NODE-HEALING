@@ -29,7 +29,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/JuanenRac/hydra-umc-node-healing/src/redact"
+	"github.com/JuanenRac/HYDRA-UMC-NODE-HEALING/src/redact"
 )
 
 // maxProbeBodyBytes bounds what a node can make the watchdog read; a health

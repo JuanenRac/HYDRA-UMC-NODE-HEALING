@@ -18,7 +18,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/JuanenRac/hydra-umc-node-healing/src/watchdog"
+	"github.com/JuanenRac/HYDRA-UMC-NODE-HEALING/src/watchdog"
 )
 
 // validNodeName is the shape allowed for a node name and for a dispatch node

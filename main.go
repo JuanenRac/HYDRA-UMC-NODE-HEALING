@@ -31,8 +31,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/JuanenRac/hydra-umc-node-healing/src/config"
-	"github.com/JuanenRac/hydra-umc-node-healing/src/watchdog"
+	"github.com/JuanenRac/HYDRA-UMC-NODE-HEALING/src/config"
+	"github.com/JuanenRac/HYDRA-UMC-NODE-HEALING/src/watchdog"
 )
 
 func main() {

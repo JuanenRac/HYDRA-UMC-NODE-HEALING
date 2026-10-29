@@ -29,7 +29,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/JuanenRac/hydra-umc-node-healing/src/redact"
+	"github.com/JuanenRac/HYDRA-UMC-NODE-HEALING/src/redact"
 )
 
 const (

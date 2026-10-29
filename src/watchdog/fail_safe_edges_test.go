@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	healthpb "github.com/JuanenRac/hydra-umc-node-healing/src/healthpb"
+	healthpb "github.com/JuanenRac/HYDRA-UMC-NODE-HEALING/src/healthpb"
 )
 
 // countingTransport fails every request and counts how many were made.

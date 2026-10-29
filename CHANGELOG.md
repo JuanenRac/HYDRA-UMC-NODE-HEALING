@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- The Go module is named `github.com/JuanenRac/HYDRA-UMC-NODE-HEALING`, with the same capitals as the repository and the other Go modules of the family (it was in lower case).
 - CI runs `staticcheck` and fails when `go mod tidy` would change `go.mod` or `go.sum` (both are clean today).
 
 ## [0.1.9] - Every node is polled on its own and a status endpoint for the watchdog itself
