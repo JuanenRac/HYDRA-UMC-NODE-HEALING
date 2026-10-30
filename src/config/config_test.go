@@ -79,18 +79,18 @@ func TestLoadNodes_MalformedJSON(t *testing.T) {
 }
 
 func TestLoadNodes_HealthURLInsteadOfAddress(t *testing.T) {
-	path := writeTemp(t, `[{"name": "HYDRA-UMC-SERVER", "healthUrl": "http://127.0.0.1:8080/api/health"}]`)
+	path := writeTemp(t, `[{"name": "HYDRA-UMC-SERVER", "healthUrl": "http://127.0.0.1:3000/api/system/metrics"}]`)
 	nodes, err := LoadNodes(path)
 	if err != nil {
 		t.Fatalf("LoadNodes: %v", err)
 	}
-	if nodes[0].HealthURL != "http://127.0.0.1:8080/api/health" || nodes[0].Address != "" {
+	if nodes[0].HealthURL != "http://127.0.0.1:3000/api/system/metrics" || nodes[0].Address != "" {
 		t.Fatalf("unexpected node: %+v", nodes[0])
 	}
 }
 
 func TestLoadNodes_HealthURLMustBeHTTP(t *testing.T) {
-	for _, bad := range []string{"127.0.0.1:8080/health", "ftp://127.0.0.1/health", "http://", "file:///etc/passwd"} {
+	for _, bad := range []string{"127.0.0.1:3000/health", "ftp://127.0.0.1/health", "http://", "file:///etc/passwd"} {
 		path := writeTemp(t, `[{"name": "n", "healthUrl": "`+bad+`"}]`)
 		if _, err := LoadNodes(path); err == nil {
 			t.Errorf("healthUrl %q was accepted, want an error", bad)
