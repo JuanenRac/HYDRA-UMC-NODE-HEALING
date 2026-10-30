@@ -19,7 +19,7 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/Feature-Self--Healing-green.svg" alt="Feature">
   <img src="https://img.shields.io/badge/Platform-Distributed%20Edge-blue.svg" alt="Platform">
   <img src="https://img.shields.io/badge/Tests-115%20passing-2ea44f.svg" alt="Tests">
-  <img src="https://img.shields.io/badge/Version-0.1.9-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Version-0.2.0-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
 
@@ -37,7 +37,7 @@ GPL-3.0-or-later - see LICENSE
 
 | | |
 |---|---|
-| 版本 | `0.1.9` |
+| 版本 | `0.2.0` |
 | 成熟度 | 可用 |
 | 测试 | 115 (`go test ./...`) |
 | 技术栈 | Go / gRPC health checks / HTTP health probes |
