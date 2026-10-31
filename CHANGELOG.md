@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.2.1] - The gRPC library moved to its patched release
+
 - **The gRPC library moves to its patched release:** the transport library goes from 1.83.1 to 1.83.2 (a security fix in the same minor version), with the network, system and text libraries it requires; the behaviour of the watchdog does not change.
 ## [0.2.0] - The vulnerability check of the Go libraries, staticcheck in the CI and the universal README
 
