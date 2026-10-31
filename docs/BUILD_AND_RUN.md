@@ -17,7 +17,7 @@ node inventory and read the log of transitions it prints.
 With `-orchestrator-url` the watchdog asks HYDRA-UMC-ORCHESTRATOR to requeue the work of a node that stays down, but only
 for an entry that names its `dispatchNode`, and never at once: the node has to stay in its failing state for the confirmation
 time, the first minute after start is a grace period, the same node is asked about at most once every few minutes and a
-budget caps the requests of a flapping network (`RecoveryPolicy`; the flags that tune them are in `-help`).
+budget caps the requests of a flapping network (`RecoveryPolicy`). The limits are tuned with `--recover-confirm-after` (how long a node must stay down before a recovery is requested; 15 seconds by default, any change of state in between cancels it), `--startup-grace` (no recovery during the first 60 seconds after the watchdog starts), `--recover-cooldown` (at most one request per node in this time; 5 minutes) and `--recover-budget` (requests over all nodes in 10 minutes before it only logs, as a circuit breaker; 3). An answer that is only a 401 or a 404 does not count as a node that fell. With `HYDRA_UMC_ORCHESTRATOR_BIN` (or the build of the ORCHESTRATOR repository next to this one) the contract test runs against the real ORCHESTRATOR binary and is skipped when there is none.
 
 ## Watching the watchdog
 
