@@ -18,14 +18,14 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Feature-Self--Healing-green.svg" alt="Feature">
   <img src="https://img.shields.io/badge/Platform-Distributed%20Edge-blue.svg" alt="Platform">
-  <img src="https://img.shields.io/badge/Tests-115%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-122%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.2.1-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
 
 ---
 
-**正直な現状確認 - 今日実際に動くもの:** ポーリング/分類ループ(`src/watchdog/watchdog.go`)、制限付きリトライポリシー(`src/watchdog/retry.go`)、HYDRA-UMC-ORCHESTRATOR への本物の復旧リクエスト配線(`src/watchdog/orchestrator_reactor.go`)、そして静的ノードレジストリのローダー(`src/config/config.go`)はすべて本物であり、テスト済みである(`src/config` と `src/watchdog` 全体で 115 件のテストが成功) - これらはモック化されたクライアントではなく、本物のループバックソケット上での本物の gRPC 往復通信である。既知かつ文書化されているギャップ: ノードレジストリは静的な JSON ファイル(`nodes.json`)であり、HYDRA-UMC-SWARM-SYNC へのライブクエリではない。なぜならそのプロジェクト自体にも、まだ問い合わせ可能な本物の API が存在しないからである - これは動的であるふりをしたプレースホルダーではなく、正直な v0 である。障害の発生したノードから実際に進行中のミッション作業をリルーティングすることも、このリポジトリの役割ではない - `OrchestratorReactor` を通じて復旧を要求するところで止まっており、その先の層(実際にジョブを移動させること)は別の場所にある。ロードマップの 4 つのフェーズ(デジタルツイン同期、Isaac Sim 物理統合、自動化された復旧パターン、AI 駆動の予測的自己修復)は、今のところ裏付けとなるコードが一切ない、将来に向けた願望である。これまでに何が実際に出荷されたかは `CHANGELOG.md` を参照。
+**正直な現状確認 - 今日実際に動くもの:** ポーリング/分類ループ(`src/watchdog/watchdog.go`)、制限付きリトライポリシー(`src/watchdog/retry.go`)、HYDRA-UMC-ORCHESTRATOR への本物の復旧リクエスト配線(`src/watchdog/orchestrator_reactor.go`)、そして静的ノードレジストリのローダー(`src/config/config.go`)はすべて本物であり、テスト済みである(`src/config` と `src/watchdog` 全体で 122 件のテストが成功) - これらはモック化されたクライアントではなく、本物のループバックソケット上での本物の gRPC 往復通信である。既知かつ文書化されているギャップ: ノードレジストリは静的な JSON ファイル(`nodes.json`)であり、HYDRA-UMC-SWARM-SYNC へのライブクエリではない。なぜならそのプロジェクト自体にも、まだ問い合わせ可能な本物の API が存在しないからである - これは動的であるふりをしたプレースホルダーではなく、正直な v0 である。障害の発生したノードから実際に進行中のミッション作業をリルーティングすることも、このリポジトリの役割ではない - `OrchestratorReactor` を通じて復旧を要求するところで止まっており、その先の層(実際にジョブを移動させること)は別の場所にある。ロードマップの 4 つのフェーズ(デジタルツイン同期、Isaac Sim 物理統合、自動化された復旧パターン、AI 駆動の予測的自己修復)は、今のところ裏付けとなるコードが一切ない、将来に向けた願望である。これまでに何が実際に出荷されたかは `CHANGELOG.md` を参照。
 
 ---
 
@@ -39,7 +39,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | バージョン | `0.2.1` |
 | 成熟度 | 機能する |
-| テスト | 115 (`go test ./...`) |
+| テスト | 122 (`go test ./...`) |
 | 技術 | Go / gRPC health checks / HTTP health probes |
 | 対象 | HYDRA-UMC セルの Raspberry Pi CM5 |
 | 実機での確認 | まだです：このバージョンについて実機での動作記録はありません |
@@ -55,7 +55,7 @@ GPL-3.0-or-later - see LICENSE
 | 領域 | 状態 | ここでの意味 |
 |---|---|---|
 | ソフトウェア | 🟡 | 主な目的では動作します。足りない点は上の正直さの確認に書かれています |
-| テスト | 🟢 | 自動テスト 115 件。変更のたびに実行されます |
+| テスト | 🟢 | 自動テスト 122 件。変更のたびに実行されます |
 | 実機 | 🔴 | まだです：このバージョンについて実機での動作記録はありません |
 | ドキュメント | 🟢 | 8 言語の README。変更のたびにマニフェストと照合されます |
 
@@ -78,6 +78,7 @@ GPL-3.0-or-later - see LICENSE
 * 🔁 **上限付きリトライ + 検証済みノード識別情報（v0、実装済み）：** 一時的なネットワーク障害が発生しても、最初の失敗だけでノードが `UNREACHABLE` になることはもうありません——`checkNode` は決定的で上限のある指数バックオフでリトライしてから諦めます。応答はするが自身を正しく識別できないノードは `INVALID` に分類され、決して信頼されず、リトライもされず、健全と報告されることもありません。
 * 📓 **永続ジャーナル(v0、実装済み):** `-journal パス` を指定すると、すべての状態遷移、復旧要求、保留された要求が JSON 行としても書き込まれ、各行は前の行の SHA-256 で連鎖し、サイズでローテーションされます(`-journal-max-bytes`、`-journal-backups`)。再起動後もノードが再起動された理由の記録が残ります。`-journal-verify` で連鎖を検査します。既定ではオフで、書き込めない行は報告されますがウォッチドッグを止めることはありません。 systemd ユニットは記録を無効にして起動します。有効にするには `/etc/hydra-umc-node-healing/journal.env` に `HYDRA_UMC_NODE_HEALING_JOURNAL_ARGS=--journal /var/lib/hydra-umc-node-healing/journal.jsonl` を書きます(OS インストーラーの `--journal` オプションが書き込みます)。記録やプローブの詳細に入るものはすべて、共有の機密マスキングを通ります。 `hydra-umc-node-healing -nodes-from-ports パス/contracts/ports.yaml` は、エコシステムのサービス登録簿(ヘルスパスを持つ各サービスを HTTP で監視)からノード登録簿を作って出力し、除外したサービスを一覧表示します。`nodes.json` を手で書く必要はありません。
 * 📈 **監視役を監視する(v0、実装済み):** `-listen HOST:PORT` を付けると `GET /health`(生存確認:バージョン、稼働時間、ノード数。名前は含まない)と `GET /metrics`(Prometheus:各ノードの状態、最終確認、所要時間、確認回数、遷移回数、復旧要求数)を提供します。ループバック以外のアドレスには `-status-token`(または `STATUS_TOKEN`)が必要で、`/metrics` で要求されます。`kill -HUP` でレジストリを再読込し(検証に通らないものは拒否され、ノードはそのまま。残るノードは状態を保ちます)、`-check-config` はレジストリを検証して終了します。正常なノードはポーリング間で保持される 1 本の gRPC 接続で確認されます。代用品とローカルサーバーに対してテスト済みで、実際の機器群には未実施です。
+* 🔐 **セルごとに 1 つのウォッチドッグ（任意）：** `--healer-cell セル`（`--orchestrator-url` と併用）はオーケストレーターのリース `healer-of-セル` を取得して更新し、終了時に手放します。復旧はリースを保持している間だけ要求され、保持していないウォッチドッグは監視を続けるだけで何も要求しません。
 
 ## 🧩 HYDRA-UMC での役割
 
@@ -130,7 +131,7 @@ go test ./...
 
 ## 🧪 テスト
 
-`go test ./...` で自動テスト 115 件を実行します。 件数は最上位の Go テストの数で、サブテストは加えていません。ハードウェアは不要です。
+`go test ./...` で自動テスト 122 件を実行します。 件数は最上位の Go テストの数で、サブテストは加えていません。ハードウェアは不要です。
 
 CI は `HYDRA_UMC_CI=1 python tools/ci_validate.py` を実行し、マニフェスト、文書、8 つの README、図を検査します。
 

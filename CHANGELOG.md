@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **A lease for the healer: only one watchdog asks for the recovery of a cell.** `--healer-cell CELL` (with `--orchestrator-url`; `--healer-id` and `--healer-lease-ttl` are optional) makes the watchdog take the lease `healer-of-<cell>` at the orchestrator, renew it every third of its time and give it up when it stops. A recovery is requested only while it holds the lease and carries the proof; a watchdog that does not hold it keeps watching and logging and asks for nothing, and one whose request is refused because of the lease does not retry. Without the option nothing changes.
 ## [0.2.1] - The gRPC library moved to its patched release
 
 - **The gRPC library moves to its patched release:** the transport library goes from 1.83.1 to 1.83.2 (a security fix in the same minor version), with the network, system and text libraries it requires; the behaviour of the watchdog does not change.

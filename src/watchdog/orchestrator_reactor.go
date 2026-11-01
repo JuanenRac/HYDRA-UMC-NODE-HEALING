@@ -130,6 +130,9 @@ type OrchestratorReactor struct {
 	Context context.Context
 	// Now defaults to time.Now - overridable for tests.
 	Now func() time.Time
+	// Lease, when set, is the lease of this healer at the orchestrator: a recovery is requested only while this watchdog holds it, and
+	// the request carries the proof. Nil keeps the old behaviour (no lease).
+	Lease *Lease
 
 	requests atomic.Int64 // recovery POSTs sent, whatever the answer
 
@@ -323,6 +326,10 @@ func (r *OrchestratorReactor) attemptRecovery(ctx context.Context, node Node, ta
 	if r.Token != "" {
 		req.Header.Set("Authorization", "Bearer "+r.Token)
 	}
+	if r.Lease != nil && !r.Lease.Apply(req) {
+		r.printf("[node-healing] recovery for %s not requested: this watchdog does not hold the lease %s (another healer does, or the orchestrator cannot be reached)\n", node.Name, r.Lease.Name())
+		return recoveryRefused
+	}
 	r.requests.Add(1)
 	resp, err := client.Do(req)
 	if err != nil {
@@ -334,6 +341,10 @@ func (r *OrchestratorReactor) attemptRecovery(ctx context.Context, node Node, ta
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
 		r.printf("[node-healing] orchestrator refused the recovery for %s (%s): ORCHESTRATOR_TOKEN is missing or wrong, so it will not be retried\n", node.Name, resp.Status)
+		return recoveryRefused
+	}
+	if resp.StatusCode == http.StatusConflict && r.Lease != nil {
+		r.printf("[node-healing] orchestrator refused the recovery for %s: this watchdog is not the holder of the lease %s, so it will not be retried\n", node.Name, r.Lease.Name())
 		return recoveryRefused
 	}
 	if resp.StatusCode != http.StatusOK {

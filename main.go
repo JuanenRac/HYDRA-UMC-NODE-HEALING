@@ -42,6 +42,9 @@ func main() {
 	// usage error (into the journal), and the token must never be. It is read from
 	// the ORCHESTRATOR_TOKEN environment variable after parsing instead.
 	orchestratorToken := flag.String("orchestrator-token", "", "bearer token sent with every recovery request (prefer the ORCHESTRATOR_TOKEN environment variable: a flag value is visible in the process list)")
+	healerCell := flag.String("healer-cell", "", "name of the cell this watchdog looks after; with --orchestrator-url it takes the lease healer-of-<cell> at the orchestrator and requests a recovery only while it holds it (empty: no lease, as before)")
+	healerID := flag.String("healer-id", "", "who this watchdog is for the lease (letters, digits and . _ : -); default is the host name")
+	healerLeaseTTL := flag.Duration("healer-lease-ttl", watchdog.DefaultLeaseTTL, "how long a grant of the lease lasts without a renewal (it is renewed every third of it)")
 	policy := watchdog.DefaultRecoveryPolicy()
 	confirmAfter := flag.Duration("recover-confirm-after", policy.ConfirmAfter, "how long a node must stay down (or unhealthy) before recovery is requested; 0 requests it at once")
 	startupGrace := flag.Duration("startup-grace", policy.StartupGrace, "no recovery is requested sooner than this after the watchdog starts")
@@ -121,6 +124,24 @@ func main() {
 	if *statusToken == "" {
 		*statusToken = os.Getenv("STATUS_TOKEN")
 	}
+	if *healerCell != "" {
+		if *orchestratorURL == "" {
+			fmt.Fprintln(os.Stderr, "[node-healing] fatal: --healer-cell needs --orchestrator-url (the lease lives at the orchestrator)")
+			os.Exit(1)
+		}
+		if !watchdog.ValidLabel(watchdog.LeasePrefix + *healerCell) {
+			fmt.Fprintln(os.Stderr, "[node-healing] fatal: --healer-cell must be letters, digits and . _ : - (the lease name is at most 128 characters)")
+			os.Exit(1)
+		}
+		if *healerID != "" && !watchdog.ValidLabel(*healerID) {
+			fmt.Fprintln(os.Stderr, "[node-healing] fatal: --healer-id must be letters, digits and . _ : -")
+			os.Exit(1)
+		}
+		if *healerLeaseTTL < time.Second {
+			fmt.Fprintln(os.Stderr, "[node-healing] fatal: --healer-lease-ttl must be at least one second")
+			os.Exit(1)
+		}
+	}
 	if *listen != "" {
 		if listenErr := watchdog.ValidateListen(*listen, *statusToken); listenErr != nil {
 			fmt.Fprintf(os.Stderr, "[node-healing] fatal: %v\n", listenErr)
@@ -156,7 +177,23 @@ func main() {
 	}
 	var reactor watchdog.Reactor = watchdog.LogReactor{Printf: printf}
 	if *orchestratorURL != "" {
-		reactor = &watchdog.OrchestratorReactor{BaseURL: *orchestratorURL, Token: *orchestratorToken, Policy: policy, Context: ctx, Printf: printf}
+		orchestratorReactor := &watchdog.OrchestratorReactor{BaseURL: *orchestratorURL, Token: *orchestratorToken, Policy: policy, Context: ctx, Printf: printf}
+		if *healerCell != "" {
+			holder := *healerID
+			if holder == "" {
+				host, _ := os.Hostname()
+				holder = host
+			}
+			if !watchdog.ValidLabel(holder) {
+				fmt.Fprintf(os.Stderr, "[node-healing] fatal: the host name %q cannot name a holder; give --healer-id\n", holder)
+				os.Exit(1)
+			}
+			lease := &watchdog.Lease{BaseURL: *orchestratorURL, Token: *orchestratorToken, Cell: *healerCell, Holder: holder, TTL: *healerLeaseTTL, Printf: printf}
+			orchestratorReactor.Lease = lease
+			go lease.Run(ctx)
+			fmt.Printf("[node-healing] lease %s as %s: a recovery is requested only while this watchdog holds it\n", lease.Name(), holder)
+		}
+		reactor = orchestratorReactor
 		fmt.Printf("[node-healing] recovery requests will be sent to orchestrator at %s only for registry entries with a \"dispatchNode\", after %s down, %s after start-up, at most %d per 10 minutes and one per node every %s\n",
 			*orchestratorURL, policy.ConfirmAfter, policy.StartupGrace, policy.BudgetMax, policy.Cooldown)
 	}
