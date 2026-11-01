@@ -118,7 +118,7 @@ flowchart TB
 
 ## 🚀 快速开始
 
-需要 Go 1.25 或更高版本。
+需要 Go 1.26 或更高版本。
 
 ```bash
 ./build.sh  # Linux, macOS (build.bat on Windows)

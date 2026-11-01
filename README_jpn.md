@@ -121,7 +121,7 @@ flowchart TB
 
 ## 🚀 クイックスタート
 
-Go 1.25 以上が必要です。
+Go 1.26 以上が必要です。
 
 ```bash
 ./build.sh  # Linux, macOS (build.bat on Windows)

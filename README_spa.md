@@ -116,7 +116,7 @@ Para más detalle, ver [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (guía de 
 
 ## 🚀 Inicio rápido
 
-Requiere Go 1.25 o superior.
+Requiere Go 1.26 o superior.
 
 ```bash
 ./build.sh  # Linux, macOS (build.bat on Windows)
