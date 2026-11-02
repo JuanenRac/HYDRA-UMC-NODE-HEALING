@@ -18,14 +18,14 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Feature-Self--Healing-green.svg" alt="Feature">
   <img src="https://img.shields.io/badge/Platform-Distributed%20Edge-blue.svg" alt="Platform">
-  <img src="https://img.shields.io/badge/Tests-168%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-172%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.2.3-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
 
 ---
 
-**诚实核查 - 今天真正能运行的部分：** 轮询/分类循环(`src/watchdog/watchdog.go`)、有限重试策略(`src/watchdog/retry.go`)、连接到 HYDRA-UMC-ORCHESTRATOR 的真实恢复请求线路(`src/watchdog/orchestrator_reactor.go`),以及静态节点注册表加载器(`src/config/config.go`)都是真实的并经过测试(`src/config` 和 `src/watchdog` 共 168 个测试通过)——而且这些都是真实回环套接字上的真实 gRPC 往返调用，而非模拟客户端。一个已知且已记录的差距：节点注册表是一个静态 JSON 文件(`nodes.json`),而不是对 HYDRA-UMC-SWARM-SYNC 的实时查询，因为那个项目本身也还没有可供查询的真实 API——这是诚实的 v0 版本，而不是假装动态的占位符。将真正在途的任务工作从故障节点重新分配出去，同样不是本仓库的职责——它只通过 `OrchestratorReactor` 请求恢复，到此为止；再往上的一层(真正搬运任务)存在于别处。路线图中的 4 个阶段(数字孪生同步、Isaac Sim 物理集成、自动化恢复模式、AI 驱动的预测性自愈)都是尚无任何代码支撑的愿景性未来工作。具体已交付的内容请见 `CHANGELOG.md`。
+**诚实核查 - 今天真正能运行的部分：** 轮询/分类循环(`src/watchdog/watchdog.go`)、有限重试策略(`src/watchdog/retry.go`)、连接到 HYDRA-UMC-ORCHESTRATOR 的真实恢复请求线路(`src/watchdog/orchestrator_reactor.go`),以及静态节点注册表加载器(`src/config/config.go`)都是真实的并经过测试(`src/config` 和 `src/watchdog` 共 172 个测试通过)——而且这些都是真实回环套接字上的真实 gRPC 往返调用，而非模拟客户端。一个已知且已记录的差距：节点注册表是一个静态 JSON 文件(`nodes.json`),而不是对 HYDRA-UMC-SWARM-SYNC 的实时查询，因为那个项目本身也还没有可供查询的真实 API——这是诚实的 v0 版本，而不是假装动态的占位符。将真正在途的任务工作从故障节点重新分配出去，同样不是本仓库的职责——它只通过 `OrchestratorReactor` 请求恢复，到此为止；再往上的一层(真正搬运任务)存在于别处。路线图中的 4 个阶段(数字孪生同步、Isaac Sim 物理集成、自动化恢复模式、AI 驱动的预测性自愈)都是尚无任何代码支撑的愿景性未来工作。具体已交付的内容请见 `CHANGELOG.md`。
 
 ---
 
@@ -39,7 +39,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | 版本 | `0.2.3` |
 | 成熟度 | 可用 |
-| 测试 | 168 (`go test ./...`) |
+| 测试 | 172 (`go test ./...`) |
 | 技术栈 | Go / gRPC health checks / HTTP health probes |
 | 目标 | HYDRA-UMC 工作单元的 Raspberry Pi CM5 |
 | 真实硬件 | 尚未：此版本没有在真实硬件上运行的记录 |
@@ -55,7 +55,7 @@ GPL-3.0-or-later - see LICENSE
 | 领域 | 状态 | 在这里的含义 |
 |---|---|---|
 | 软件 | 🟡 | 主要用途可用；上面的诚实性检查列出了仍然缺少的内容 |
-| 测试 | 🟢 | 168 项自动测试，每次变更都会运行 |
+| 测试 | 🟢 | 172 项自动测试，每次变更都会运行 |
 | 真实硬件 | 🔴 | 尚未：此版本没有在真实硬件上运行的记录 |
 | 接口与协议 | 🟡 | 提供的路由或消息已有文档，并用客户端测试过；尚未被所有客户端使用 |
 | 集成 | 🟠 | 其消息和路由已对照 SDK 的共享契约检查；尚未与真实设备一起运行 |
@@ -114,7 +114,7 @@ flowchart TB
 * **为何检测机制与其所保护的编排器相互独立。** 如果一个节点自愈看门狗运行在编排器进程*内部*，它就无法检测到该进程自身发生挂起——作为独立服务运行，才能真正实现"检测无响应节点并重新路由其工作"这一目标，即使无响应的节点正是编排器本身。
 * **检测机制与真实的故障转移如今都已真实接通。** `src/watchdog` 会对每个已注册的节点真实调用 `HealthService.Check()`（来自 `HYDRA-UMC-ORCHESTRATOR/proto/hydra_common.proto` 的共享 `hydra.common.v1` gRPC 契约），基于真实的时间间隔和真实的网络连接，将结果分类为 HEALTHY/DEGRADED/UNHEALTHY/UNREACHABLE 之一，并且只在状态*发生变化*时触发一次 `Reactor` 回调（绝不会每个轮询周期都触发）。`OrchestratorReactor`（`src/watchdog/orchestrator_reactor.go`）是生产环境中实际使用的真实 `Reactor` 实现：每当某个节点转入不健康状态，它就会调用 HYDRA-UMC-ORCHESTRATOR 自身真实的 `POST /nodes/:node/recover`，请求一次真正的恢复操作，而不只是记录检测结果。
 * **节点注册表是静态 JSON 文件，可选地由 HYDRA-UMC-SWARM-SYNC 补全。** `nodes.json`（见 `nodes.example.json`）仍是基础。使用 `-swarm-config 文件`（见 `swarm.example.json`，默认关闭）时，看门狗还会读取 SWARM-SYNC 的 `GET /state`，并加入在 `healing/node/<名称>` 下公布的节点：每条公告带有只有运营者密钥持有者才能生成的 HMAC-SHA256 签名，要通过与文件中一行相同的检查，否则被排除（并计数）；同名时静态条目优先，读取失败则节点保持原样。*（用模拟的 SWARM-SYNC 测试；SWARM-SYNC 本身尚未写入这些公告）*
-* **恢复前的隔离（fencing），默认关闭。** 使用 `-fencing-config 文件`（见 `fencing.example.json`）时，只有确认节点的机器人安全后才会发出恢复请求：先请求单元保持机器人，其状态必须读为已停止、已保持或已隔离（租约模式下，节点故障时间必须超过机器人租约加余量）。单元不应答、应答有误或给出其他状态都视为拒绝：不会重新排队任何任务，拒绝会被记录并计数。*（用模拟单元测试；真实单元的路由尚未定义）*
+* **恢复前的隔离（fencing），强制开启。** 只有确认节点的机器人安全后才会发出恢复请求：使用 `-fencing-config 文件`（见 `fencing.example.json`）时，先请求单元保持机器人，其状态必须读为已停止、已保持或已隔离（租约模式下，节点故障时间必须超过机器人租约加余量）。单元不应答、应答有误或给出其他状态都视为拒绝：不会重新排队任何任务，拒绝会被记录并计数。没有该文件时完全不会重新排队任何任务（所有恢复都被拒绝并计数）；唯一的出路是在文件中用 `"enabled": false`（可选 `"disabledReason"`）有意声明，启动时会写入日志并显示在 `/metrics`。*（用模拟单元测试；真实单元的路由尚未定义）*
 * **无需轮询的检测，默认关闭。** 节点条目带有 `"watch": true` 和 `address` 时，看门狗会打开健康服务的服务端流式 `Watch()`，随到随收报告；轮询仍作为安全网，流中断后立即检查一次。*（用模拟 gRPC 服务器测试：目前没有节点提供 `Watch()`，共享合同也未声明它）*
 * 🩺 **通过 HTTP 探测真实存在的服务，并发送令牌（v0）：** `nodes.json` 中的条目可以用 `healthUrl`（`http://…` 或 `https://…`）代替 gRPC 的 `address`：看门狗发送一次 `GET` 并对响应分类——`2xx` 为健康（JSON 的 `status` 为 `degraded`/`unhealthy` 时按其处理，JSON 的 `name` 与注册表名称不同则为 `INVALID`），`5xx` 为不健康，无响应为 `UNREACHABLE`（会重试），重定向或 `4xx` 为 `INVALID`（URL 错误或缺少凭据属于配置问题而非节点故障，因此从不重试，也从不跟随重定向）。此前每个节点都通过一个 gRPC `HealthService` 探测，而生态系统中没有任何服务实现它，所以完全健康的服务也会被报告为 `UNREACHABLE`。设置了 `-orchestrator-token` / `ORCHESTRATOR_TOKEN` 时，发往编排器的恢复请求会带上 `Authorization: Bearer`（位于网络地址上的编排器否则会拒绝它），节点名称会作为单个路径段被转义。*（已实现）*
 * **这如何融入生态系统的其余部分。** 作为 HYDRA-UMC-ORCHESTRATOR 下的同级服务——监视其注册表中的每个节点，报告状态变化，并在某个节点变为不健康时通过 `OrchestratorReactor` 请求真正的恢复；将该节点上实际进行中的工作重新路由出去，是构建于此之上的下一层。
@@ -135,7 +135,7 @@ go test ./...
 
 ## 🧪 测试
 
-运行 `go test ./...` 会执行 168 个自动测试。 数字为顶层 Go 测试的数量，不含子测试。不需要硬件。
+运行 `go test ./...` 会执行 172 个自动测试。 数字为顶层 Go 测试的数量，不含子测试。不需要硬件。
 
 CI 运行 `HYDRA_UMC_CI=1 python tools/ci_validate.py`，检查清单、文档、八个 README 和图片。
 

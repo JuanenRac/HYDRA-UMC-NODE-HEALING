@@ -322,3 +322,14 @@ func TestRemovingANodeFromTheRegistryClosesItsConnection(t *testing.T) {
 		t.Fatalf("connections kept %d, after the reload %d", kept, after)
 	}
 }
+
+func TestMetricsShowHowFencingStands(t *testing.T) {
+	wd := checkedWatchdog(t, []Node{{Name: "up", HealthURL: httpNodeServer(t, 200).URL}})
+	for mode, want := range map[string]string{"enforced": "hydra_node_healing_fencing_enforced 1", "missing-config": "hydra_node_healing_fencing_enforced 0", "disabled": "hydra_node_healing_fencing_enforced 0"} {
+		server := &StatusServer{Watchdog: wd, Version: "1", Started: time.Now(), Fencing: &FencingState{Mode: mode, Reason: "bench \"A\""}}
+		_, body := get(t, server.Handler(), "/metrics", "")
+		if !strings.Contains(body, want) || !strings.Contains(body, `hydra_node_healing_fencing_info{mode="`+mode+`",reason="bench \"A\""} 1`) {
+			t.Errorf("%s: metrics lack the fencing lines:\n%s", mode, body)
+		}
+	}
+}

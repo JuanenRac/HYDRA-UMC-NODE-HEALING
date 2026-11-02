@@ -18,14 +18,14 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Feature-Self--Healing-green.svg" alt="Feature">
   <img src="https://img.shields.io/badge/Platform-Distributed%20Edge-blue.svg" alt="Platform">
-  <img src="https://img.shields.io/badge/Tests-168%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-172%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.2.3-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
 
 ---
 
-**Comprobación de honestidad - qué funciona realmente hoy:** el bucle de sondeo/clasificación (`src/watchdog/watchdog.go`), la política de reintento acotado (`src/watchdog/retry.go`), el cableado real de solicitud de recuperación a HYDRA-UMC-ORCHESTRATOR (`src/watchdog/orchestrator_reactor.go`), y el cargador estático del registro de nodos (`src/config/config.go`) son todos reales y están testeados (168 tests pasando entre `src/config` y `src/watchdog`) - y son round-trips gRPC reales sobre sockets loopback reales, no un cliente simulado. Lo que es una brecha conocida y documentada: el registro de nodos es un archivo JSON estático (`nodes.json`), no una consulta en vivo a HYDRA-UMC-SWARM-SYNC, porque ese proyecto tampoco tiene todavía una API real que consultar - esta es la v0 honesta, no un placeholder que finge ser dinámico. Redirigir el trabajo de misión en curso lejos de un nodo caído tampoco es tarea de este repositorio - solicita recuperación a través de `OrchestratorReactor` y se detiene ahí; la siguiente capa (mover realmente los trabajos) vive en otro lugar. Las 4 fases del roadmap (sincronización de gemelo digital, integración de física Isaac Sim, patrones de recuperación automatizada, curación predictiva basada en IA) son trabajo futuro aspiracional sin ningún código detrás todavía. Ver `CHANGELOG.md` para lo que se ha entregado exactamente hasta ahora.
+**Comprobación de honestidad - qué funciona realmente hoy:** el bucle de sondeo/clasificación (`src/watchdog/watchdog.go`), la política de reintento acotado (`src/watchdog/retry.go`), el cableado real de solicitud de recuperación a HYDRA-UMC-ORCHESTRATOR (`src/watchdog/orchestrator_reactor.go`), y el cargador estático del registro de nodos (`src/config/config.go`) son todos reales y están testeados (172 tests pasando entre `src/config` y `src/watchdog`) - y son round-trips gRPC reales sobre sockets loopback reales, no un cliente simulado. Lo que es una brecha conocida y documentada: el registro de nodos es un archivo JSON estático (`nodes.json`), no una consulta en vivo a HYDRA-UMC-SWARM-SYNC, porque ese proyecto tampoco tiene todavía una API real que consultar - esta es la v0 honesta, no un placeholder que finge ser dinámico. Redirigir el trabajo de misión en curso lejos de un nodo caído tampoco es tarea de este repositorio - solicita recuperación a través de `OrchestratorReactor` y se detiene ahí; la siguiente capa (mover realmente los trabajos) vive en otro lugar. Las 4 fases del roadmap (sincronización de gemelo digital, integración de física Isaac Sim, patrones de recuperación automatizada, curación predictiva basada en IA) son trabajo futuro aspiracional sin ningún código detrás todavía. Ver `CHANGELOG.md` para lo que se ha entregado exactamente hasta ahora.
 
 ---
 
@@ -39,7 +39,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | Versión | `0.2.3` |
 | Madurez | Funcional |
-| Tests | 168 (`go test ./...`) |
+| Tests | 172 (`go test ./...`) |
 | Tecnología | Go / gRPC health checks / HTTP health probes |
 | Destino | La Raspberry Pi CM5 de una celda HYDRA-UMC |
 | En hardware real | Todavía no: no consta ninguna ejecución en hardware real para esta versión |
@@ -55,7 +55,7 @@ Cada línea es una parte de este repositorio y la luz dice hasta dónde llega ho
 | Área | Estado | Qué significa aquí |
 |---|---|---|
 | Software | 🟡 | Funciona para su propósito principal; la comprobación de honestidad de arriba lista lo que aún falta |
-| Pruebas | 🟢 | 168 pruebas automáticas, ejecutadas en cada cambio |
+| Pruebas | 🟢 | 172 pruebas automáticas, ejecutadas en cada cambio |
 | Hardware real | 🔴 | Todavía no: no consta ninguna ejecución en hardware real para esta versión |
 | Interfaz y protocolos | 🟡 | Las rutas o los mensajes que ofrece están documentados y probados con un cliente; aún no los han usado todos los clientes |
 | Integración | 🟠 | Sus mensajes y rutas se comprueban contra los contratos compartidos del SDK; no ha funcionado junto con el equipo real |
@@ -112,7 +112,7 @@ flowchart TB
 * **Por qué la detección está separada del orquestador que protege.** Un vigilante de auto-recuperación que corriera DENTRO del proceso del orquestador no podría detectar que ese mismo proceso se ha colgado - correr como servicio independiente es lo que hace posible de verdad 'detectar un nodo sin respuesta y redirigir su trabajo', incluso cuando el nodo sin respuesta es el propio orquestador.
 * **La detección Y el failover real ya están cableados.** `src/watchdog` consulta el `HealthService.Check()` (el contrato gRPC compartido `hydra.common.v1` de `HYDRA-UMC-ORCHESTRATOR/proto/hydra_common.proto`) de cada nodo registrado, sobre un intervalo real y una conexión de red real, clasifica el resultado en HEALTHY/DEGRADED/UNHEALTHY/UNREACHABLE, y dispara un callback `Reactor` solo cuando el estado *cambia* (nunca en cada ciclo). `OrchestratorReactor` (`src/watchdog/orchestrator_reactor.go`) es la implementación real de `Reactor` usada en producción: llama al `POST /nodes/:node/recover` real de HYDRA-UMC-ORCHESTRATOR en cada transición a un estado no saludable, pidiendo una acción de recuperación real, no solo registrando la detección.
 * **El registro de nodos es un fichero JSON estático, que puede completarse desde HYDRA-UMC-SWARM-SYNC.** `nodes.json` (véase `nodes.example.json`) sigue siendo la base. Con `-swarm-config FICHERO` (véase `swarm.example.json`, apagado por defecto) el vigilante lee también `GET /state` de SWARM-SYNC y añade los nodos anunciados bajo `healing/node/<nombre>`: cada anuncio lleva una firma HMAC-SHA256 que solo pueden hacer quienes tienen la clave del operador, pasa las mismas comprobaciones que una línea del fichero y se descarta (y se cuenta) si no las supera; una entrada estática gana a una anunciada con el mismo nombre, y una lectura que falla deja los nodos como estaban. *(probado contra un SWARM-SYNC simulado; el propio SWARM-SYNC aún no escribe estos anuncios)*
-* **Aislamiento antes de una recuperación, apagado por defecto.** Con `-fencing-config FICHERO` (véase `fencing.example.json`) una petición de recuperación solo sale cuando los robots del nodo están confirmados como seguros: se pide a la celda que los sujete y su estado debe leerse detenido, retenido o aislado (o, en modo de concesión, el nodo debe llevar fallando más que la concesión del robot más un margen). Una celda que no responde, responde mal o dice otro estado es una negativa: no se vuelve a encolar nada y la negativa se registra y se cuenta. *(probado contra una celda simulada; las rutas de la celda real aún no están definidas)*
+* **Aislamiento antes de una recuperación, obligatorio.** Una petición de recuperación solo sale cuando los robots del nodo están confirmados como seguros: con `-fencing-config FICHERO` (véase `fencing.example.json`) se pide a la celda que los sujete y su estado debe leerse detenido, retenido o aislado (o, en modo de concesión, el nodo debe llevar fallando más que la concesión del robot más un margen). Una celda que no responde, responde mal o dice otro estado es una negativa: no se vuelve a encolar nada y la negativa se registra y se cuenta. Sin el fichero no se vuelve a encolar nada (toda recuperación se rechaza y se cuenta); la única salida es declararlo a propósito con `"enabled": false` en el fichero (y, si se quiere, `"disabledReason"`), lo que se escribe en el registro al arrancar y se muestra en `/metrics`. *(probado contra una celda simulada; las rutas de la celda real aún no están definidas)*
 * **Detección sin sondeo, apagada por defecto.** Una entrada de nodo con `"watch": true` y una `address` hace que el vigilante abra el `Watch()` de flujo del servicio de salud y tome sus informes según llegan; el sondeo queda como red de seguridad y, si el flujo se rompe, se hace una comprobación al instante. *(probado contra un servidor gRPC simulado: ningún nodo sirve aún `Watch()` y el contrato compartido no lo declara)*
 * 🩺 **Sondea por HTTP los servicios que existen, y envía su token (v0):** una entrada de `nodes.json` puede llevar un `healthUrl` (`http://…` o `https://…`) en lugar de una `address` gRPC: el watchdog envía un `GET` y clasifica la respuesta — `2xx` sano (se respeta un `status` JSON de `degraded`/`unhealthy`, y un `name` JSON distinto del nombre del registro es `INVALID`), `5xx` no sano, sin respuesta `UNREACHABLE` (se reintenta), una redirección o un `4xx` `INVALID` (una URL equivocada o una credencial que falta es configuración, no un fallo del nodo, así que nunca se reintenta, y las redirecciones no se siguen jamás). Hasta ahora cada nodo se sondeaba con un `HealthService` gRPC que ningún servicio del ecosistema implementa, así que un servicio perfectamente sano se reportaba como `UNREACHABLE`. La solicitud de recuperación al orquestador lleva `Authorization: Bearer` cuando se define `-orchestrator-token` / `ORCHESTRATOR_TOKEN` (un orquestador en una dirección de red la rechaza si no), y el nombre del nodo se escapa como un único segmento de ruta. *(implementado)*
 * **Cómo encaja en el resto del ecosistema.** Un servicio hermano bajo HYDRA-UMC-ORCHESTRATOR - vigila cada nodo de su registro, reporta cambios de estado, y ahora pide una recuperación real mediante `OrchestratorReactor` cuando uno deja de estar saludable; redirigir el trabajo en curso lejos de ese nodo es la capa siguiente por encima de esta.
@@ -133,7 +133,7 @@ go test ./...
 
 ## 🧪 Pruebas
 
-168 pruebas automáticas se ejecutan con `go test ./...`. Cada cifra es una prueba de Go de primer nivel; las subpruebas no se suman. No necesitan hardware.
+172 pruebas automáticas se ejecutan con `go test ./...`. Cada cifra es una prueba de Go de primer nivel; las subpruebas no se suman. No necesitan hardware.
 
 El CI ejecuta `HYDRA_UMC_CI=1 python tools/ci_validate.py`, que comprueba el manifiesto, los documentos, los ocho README y las imágenes.
 

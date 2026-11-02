@@ -59,7 +59,7 @@ func main() {
 	statusToken := flag.String("status-token", "", "bearer token demanded on /metrics (prefer the STATUS_TOKEN environment variable: a flag value is visible in the process list)")
 	eventsConfigPath := flag.String("events-config", "", "JSON file that turns on the events over MQTT (every transition of a node, and a proposal of a maintenance incident for a node that stays down); empty publishes nothing, as before this flag existed")
 	swarmConfigPath := flag.String("swarm-config", "", "JSON file that adds to the registry the nodes announced in the state of SWARM-SYNC, with signed entries (see docs/INTEGRATION_CONTRACT.md); empty uses only the registry file, as before this flag existed")
-	fencingConfigPath := flag.String("fencing-config", "", "JSON file that turns on fencing: before a recovery is requested the cell must confirm that the robots of the node are stopped or isolated, and nothing is requeued otherwise; needs -orchestrator-url; empty requests recoveries as before this flag existed")
+	fencingConfigPath := flag.String("fencing-config", "", "JSON file of the fencing, which is mandatory: before a recovery is requested the cell must confirm that the robots of the node are stopped or isolated, and nothing is requeued otherwise; without this flag every recovery is refused; \"enabled\": false in the file turns fencing off on purpose")
 	checkConfig := flag.Bool("check-config", false, "load and validate the node registry given with -nodes, print a summary and exit (0 = valid)")
 	nodesFromPorts := flag.String("nodes-from-ports", "", "print a node registry built from the service registry of the ecosystem (contracts/ports.yaml of the SDK): every service with a health path, probed over HTTP; the services left out are listed on stderr; then exit")
 	flag.Parse()
@@ -143,6 +143,9 @@ func main() {
 				os.Exit(1)
 			}
 			fmt.Printf("FENCING_CONFIG=PASS fencing %s\n", onOff(fencingConfig.Enabled))
+			if !fencingConfig.Enabled {
+				fmt.Println("FENCING_CONFIG=WARN fencing is turned off on purpose: recoveries would be requested without confirming the robots")
+			}
 		}
 		return
 	}
@@ -192,25 +195,38 @@ func main() {
 	}
 	fmt.Printf("[node-healing] watching %d node(s) from %s\n", len(nodes), *registryPath)
 
+	// Fencing is mandatory when recoveries are requested: no file means every recovery is refused (fail closed); only a file
+	// with "enabled": false turns it off, and the reason is logged and shown on /metrics.
 	var fencer watchdog.Fencer
-	if *fencingConfigPath != "" {
-		fencingConfig, fencingErr := watchdog.LoadFencingConfig(*fencingConfigPath)
-		if fencingErr != nil {
-			fmt.Fprintf(os.Stderr, "[node-healing] fatal: --fencing-config: %v\n", fencingErr)
-			os.Exit(1)
-		}
-		if fencingConfig.Enabled {
-			if *orchestratorURL == "" {
-				fmt.Fprintln(os.Stderr, "[node-healing] fatal: --fencing-config guards the recovery request, which needs --orchestrator-url")
+	var fencingState *watchdog.FencingState
+	if *orchestratorURL != "" {
+		if *fencingConfigPath == "" {
+			fencer = watchdog.MissingFencer{}
+			fencingState = &watchdog.FencingState{Mode: "missing-config", Reason: "no fencing file given"}
+			fmt.Println("[node-healing] fencing is MANDATORY and no --fencing-config was given: no recovery will be requested (every one is refused and counted). Give a fencing file, or turn it off on purpose with \"enabled\": false")
+		} else {
+			fencingConfig, fencingErr := watchdog.LoadFencingConfig(*fencingConfigPath)
+			if fencingErr != nil {
+				fmt.Fprintf(os.Stderr, "[node-healing] fatal: --fencing-config: %v\n", fencingErr)
 				os.Exit(1)
 			}
-			httpFencer, fencerErr := watchdog.NewHTTPFencer(fencingConfig)
-			if fencerErr != nil {
-				fmt.Fprintf(os.Stderr, "[node-healing] fatal: --fencing-config: %v\n", fencerErr)
-				os.Exit(1)
+			if fencingConfig.Enabled {
+				httpFencer, fencerErr := watchdog.NewHTTPFencer(fencingConfig)
+				if fencerErr != nil {
+					fmt.Fprintf(os.Stderr, "[node-healing] fatal: --fencing-config: %v\n", fencerErr)
+					os.Exit(1)
+				}
+				fencer = httpFencer
+				fencingState = &watchdog.FencingState{Mode: "enforced", Reason: fencingConfig.Mode}
+				fmt.Printf("[node-healing] fencing on: a recovery is requested only after the robots of the node are confirmed safe (%s)\n", fencingConfig.Mode)
+			} else {
+				reason := fencingConfig.DisabledReason
+				if reason == "" {
+					reason = "no reason given"
+				}
+				fencingState = &watchdog.FencingState{Mode: "disabled", Reason: reason}
+				fmt.Printf("[node-healing] WARNING fencing is turned OFF on purpose in %s: recoveries are requested without confirming that the robots are safe (reason: %s)\n", *fencingConfigPath, reason)
 			}
-			fencer = httpFencer
-			fmt.Printf("[node-healing] fencing on: a recovery is requested only after the robots of the node are confirmed safe (%s)\n", fencingConfig.Mode)
 		}
 	}
 
@@ -319,6 +335,7 @@ func main() {
 		if counter, ok := reactor.(watchdog.FenceCounter); ok && fencer != nil {
 			status.Fences = counter
 		}
+		status.Fencing = fencingState
 		go func() {
 			if serveErr := status.Serve(ctx, *listen); serveErr != nil {
 				fmt.Fprintf(os.Stderr, "[node-healing] status endpoint on %s stopped: %v\n", *listen, serveErr)

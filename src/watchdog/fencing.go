@@ -18,7 +18,9 @@
 //	"lease"    the robot stops by itself when the heartbeat of its lease is not renewed for leaseTtlSeconds. The node must have been
 //	           failing for longer than that, plus marginSeconds, before the missions are given away.
 //
-// Fencing is off unless the file is given with enabled true. Without it the recovery works as it always did.
+// Fencing is mandatory. Without a fencing file, or with a file that does not turn it off, a recovery is requested only after the
+// cell confirms the robots are safe; with no file at all nothing is requeued (the refusal is logged and counted). The one way out
+// is to declare it on purpose, with "enabled": false (and, if wanted, "disabledReason") in the file given with -fencing-config.
 package watchdog
 
 import (
@@ -48,7 +50,10 @@ type Fencer interface {
 
 // FencingConfig is the file given with -fencing-config.
 type FencingConfig struct {
+	// Enabled is true when the file does not say otherwise: fencing is mandatory. Only an explicit "enabled": false turns it off.
 	Enabled bool `json:"enabled"`
+	// DisabledReason is written to the log and to /metrics when fencing is turned off on purpose (at most 200 characters).
+	DisabledReason string `json:"disabledReason"`
 	// Mode is "confirm" (default) or "lease".
 	Mode string `json:"mode"`
 	// HoldURL is POSTed to ask the cell to hold the robot; {node} is replaced by the dispatch node. Optional.
@@ -102,6 +107,14 @@ func checkTemplate(name, template string, allowPlaintext bool) error {
 
 // Validate refuses a configuration that cannot confirm anything or is unsafe.
 func (c FencingConfig) Validate() error {
+	if len(c.DisabledReason) > 200 {
+		return fmt.Errorf("fencing config: \"disabledReason\" is at most 200 characters")
+	}
+	for _, r := range c.DisabledReason {
+		if r < 0x20 || r == 0x7f {
+			return fmt.Errorf("fencing config: \"disabledReason\" must be plain text on one line")
+		}
+	}
 	if !c.Enabled {
 		return nil
 	}
@@ -153,7 +166,14 @@ func LoadFencingConfig(path string) (FencingConfig, error) {
 	if err != nil {
 		return FencingConfig{}, fmt.Errorf("reading fencing config %q: %w", path, err)
 	}
+	var present map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &present); err != nil {
+		return FencingConfig{}, fmt.Errorf("parsing fencing config %q: %w", path, err)
+	}
 	var c FencingConfig
+	if _, said := present["enabled"]; !said {
+		c.Enabled = true // fencing is mandatory: only an explicit false turns it off
+	}
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&c); err != nil {
@@ -314,4 +334,22 @@ func (f *HTTPFencer) readState(ctx context.Context, target string) (string, erro
 		return "", fmt.Errorf("the state of the robot is not understood")
 	}
 	return strings.ToLower(body.State), nil
+}
+
+// MissingFencer stands in for the Fencer when no fencing file was given: fencing is mandatory, so nothing can be confirmed and no
+// recovery request leaves. Fail closed: the missions stay where they are until a fencing file is given or fencing is turned off
+// on purpose.
+type MissingFencer struct{}
+
+// Fence implements Fencer and always refuses.
+func (MissingFencer) Fence(context.Context, Node, string, time.Duration) FenceResult {
+	return FenceResult{false, "fencing is mandatory and no -fencing-config was given (give a fencing file, or turn fencing off on purpose with \"enabled\": false)"}
+}
+
+// FencingState says how fencing stands, for /metrics.
+type FencingState struct {
+	// Mode is "enforced" (a file confirms the robots), "missing-config" (mandatory, no file: every recovery is refused) or
+	// "disabled" (turned off on purpose in the file).
+	Mode   string
+	Reason string
 }

@@ -83,6 +83,8 @@ type StatusServer struct {
 	Recoveries RecoveryCounter
 	// Fences, when set, adds the counters of fencing.
 	Fences FenceCounter
+	// Fencing, when set, adds how fencing stands (enforced, missing-config or disabled and why).
+	Fencing *FencingState
 	// Events, when set, adds the counters of the events published over MQTT.
 	Events EventCounter
 	// Now defaults to time.Now.
@@ -194,6 +196,14 @@ func (s *StatusServer) metrics(w http.ResponseWriter, r *http.Request) {
 	if s.Fences != nil {
 		fmt.Fprintf(&b, "# HELP hydra_node_healing_fence_confirmed_total Recoveries that went on because the robots were confirmed safe.\n# TYPE hydra_node_healing_fence_confirmed_total counter\nhydra_node_healing_fence_confirmed_total %d\n", s.Fences.FenceConfirmations())
 		fmt.Fprintf(&b, "# HELP hydra_node_healing_fence_refused_total Recoveries held back because the robots were not confirmed safe.\n# TYPE hydra_node_healing_fence_refused_total counter\nhydra_node_healing_fence_refused_total %d\n", s.Fences.FenceRefusals())
+	}
+	if s.Fencing != nil {
+		on := 0
+		if s.Fencing.Mode == "enforced" {
+			on = 1
+		}
+		fmt.Fprintf(&b, "# HELP hydra_node_healing_fencing_enforced 1 when fencing confirms the robots before a recovery, 0 when it is missing or was turned off on purpose.\n# TYPE hydra_node_healing_fencing_enforced gauge\nhydra_node_healing_fencing_enforced %d\n", on)
+		fmt.Fprintf(&b, "# HELP hydra_node_healing_fencing_info How fencing stands and, when it was turned off on purpose, the reason given.\n# TYPE hydra_node_healing_fencing_info gauge\nhydra_node_healing_fencing_info{mode=\"%s\",reason=\"%s\"} 1\n", escapeLabel(s.Fencing.Mode), escapeLabel(s.Fencing.Reason))
 	}
 	if s.Events != nil {
 		fmt.Fprintf(&b, "# HELP hydra_node_healing_events_published_total Events published over MQTT.\n# TYPE hydra_node_healing_events_published_total counter\nhydra_node_healing_events_published_total %d\n", s.Events.Published())

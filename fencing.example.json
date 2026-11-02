@@ -1,5 +1,5 @@
-{
-  "enabled": false,
+﻿{
+  "enabled": true,
   "mode": "confirm",
   "holdUrl": "http://127.0.0.1:8080/api/robots/{node}/hold",
   "statusUrl": "http://127.0.0.1:8080/api/robots/{node}/state",

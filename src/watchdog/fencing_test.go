@@ -375,3 +375,51 @@ func TestOrchestratorReactor_TheFenceKnowsHowLongTheNodeHasBeenFailing(t *testin
 
 // the status endpoint reads the counters through this interface
 var _ FenceCounter = (*OrchestratorReactor)(nil)
+
+func TestLoadFencingConfig_MandatoryUnlessTurnedOffOnPurpose(t *testing.T) {
+	dir := t.TempDir()
+	write := func(text string) string {
+		p := filepath.Join(dir, "f.json")
+		if err := os.WriteFile(p, []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+	c, err := LoadFencingConfig(write(`{"statusUrl": "http://127.0.0.1:1/x"}`))
+	if err != nil || !c.Enabled {
+		t.Fatalf("a file that does not mention enabled must keep fencing on: enabled=%v err=%v", c.Enabled, err)
+	}
+	if _, err := LoadFencingConfig(write(`{}`)); err == nil {
+		t.Error("an empty file keeps fencing on and so needs a statusUrl")
+	}
+	c, err = LoadFencingConfig(write(`{"enabled": false, "disabledReason": "bench without robots"}`))
+	if err != nil || c.Enabled || c.DisabledReason != "bench without robots" {
+		t.Errorf("an explicit false turns it off with its reason: %+v %v", c, err)
+	}
+	if _, err := LoadFencingConfig(write(`{"enabled": false, "disabledReason": "a\nb"}`)); err == nil {
+		t.Error("a reason with a line break must be refused")
+	}
+}
+
+func TestMissingFencerAlwaysRefuses(t *testing.T) {
+	v := MissingFencer{}.Fence(context.Background(), Node{Name: "n"}, "cell-a", time.Hour)
+	if v.Safe || !strings.Contains(v.Reason, "mandatory") {
+		t.Errorf("verdict = %+v", v)
+	}
+}
+
+func TestOrchestratorReactor_WithoutAFencingFileNothingIsRequeued(t *testing.T) {
+	var posts atomic.Int64
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		posts.Add(1)
+		w.WriteHeader(200)
+	}))
+	defer server.Close()
+	reactor := &OrchestratorReactor{BaseURL: server.URL, Fencer: MissingFencer{}, Printf: func(string, ...any) {}}
+	if got := reactor.attemptRecovery(context.Background(), Node{Name: "n"}, "cell-a"); got != recoveryTransient {
+		t.Errorf("outcome = %v, want a refusal that is retried", got)
+	}
+	if posts.Load() != 0 || reactor.FenceRefusals() != 1 {
+		t.Errorf("posts=%d refused=%d: nothing must leave", posts.Load(), reactor.FenceRefusals())
+	}
+}
