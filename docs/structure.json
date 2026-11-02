@@ -320,6 +320,29 @@
           }
         },
         {
+          "name": "events.example.json",
+          "desc": {
+            "en": "example of the events file",
+            "es": "ejemplo del fichero de eventos",
+            "de": "Beispiel der Ereignisdatei",
+            "fr": "exemple du fichier d'événements",
+            "it": "esempio del file degli eventi",
+            "ja": "イベントファイルの例",
+            "zh": "事件文件示例",
+            "pt": "exemplo do ficheiro de eventos"
+          },
+          "tree_desc": {
+            "en": "example of the events file",
+            "es": "ejemplo del fichero de eventos",
+            "de": "Beispiel der Ereignisdatei",
+            "fr": "exemple du fichier d'événements",
+            "it": "esempio del file degli eventi",
+            "ja": "イベントファイルの例",
+            "zh": "事件文件示例",
+            "pt": "exemplo do ficheiro de eventos"
+          }
+        },
+        {
           "name": "go.mod / go.sum",
           "desc": {
             "en": "Go module definition",
