@@ -82,11 +82,15 @@ func TestTheExampleRegistryAgreesWithTheServiceRegistry(t *testing.T) {
 	var entries []struct {
 		Name      string `json:"name"`
 		HealthURL string `json:"healthUrl"`
+		Address   string `json:"address"`
 	}
 	if err := json.Unmarshal(example, &entries); err != nil {
 		t.Fatal(err)
 	}
 	for _, e := range entries {
+		if e.Address != "" {
+			continue // gRPC entries are checked by TestShippedExampleWatchesOnlyEndpointsThatExist
+		}
 		s, ok := known[e.Name]
 		if !ok {
 			t.Errorf("%s is not a service of the registry", e.Name)

@@ -130,8 +130,13 @@ func TestShippedExampleWatchesOnlyEndpointsThatExist(t *testing.T) {
 		t.Fatalf("the shipped example does not load: %v", err)
 	}
 	for _, node := range nodes {
-		// no service of this ecosystem implements the gRPC HealthService, so the example must not use it
-		if node.Address != "" || node.HealthURL == "" {
+		// the two services that serve the gRPC HealthService do it on loopback, with the stream; everything else is probed over HTTP
+		grpcServers := map[string]string{"HYDRA-UMC-ORCHESTRATOR": "127.0.0.1:50114", "HYDRA-UMC-JOB-DISPATCHER": "127.0.0.1:50090"}
+		if want, ok := grpcServers[node.Name]; ok {
+			if node.Address != want || !node.Watch || node.HealthURL != "" {
+				t.Errorf("%s must use the loopback gRPC address %s with the stream: %+v", node.Name, want, node)
+			}
+		} else if node.Address != "" || node.HealthURL == "" {
 			t.Errorf("%s uses a gRPC address in the shipped example: %+v", node.Name, node)
 		}
 		if node.DispatchNode != "" {

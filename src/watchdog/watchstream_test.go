@@ -2,7 +2,7 @@
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
 // GPL-3.0-or-later - see LICENSE
 //
-// A real gRPC server that serves the Watch() stream (declared here by hand, because the vendored contract does not carry it yet) and a
+// A real gRPC server that serves the Watch() stream (the typed HealthService of the vendored contract) and a
 // real Watchdog that follows it over a loopback connection.
 package watchdog
 
@@ -20,46 +20,28 @@ import (
 
 // watchNode serves Check() and Watch(). Reports pushed on updates are streamed to every open Watch().
 type watchNode struct {
+	healthpb.UnimplementedHealthServiceServer
 	name    string
 	checks  atomic.Int64
 	updates chan healthpb.HealthState
 }
 
-type watchService interface{}
+// Check answers OK under the node's own name; Watch streams every state pushed on updates until the client leaves.
+func (n *watchNode) Check(_ context.Context, _ *healthpb.Empty) (*healthpb.HealthReport, error) {
+	n.checks.Add(1)
+	return &healthpb.HealthReport{Identity: &healthpb.NodeIdentity{Name: n.name}, State: healthpb.HealthState_HEALTH_STATE_OK}, nil
+}
 
-func (n *watchNode) desc() *grpc.ServiceDesc {
-	return &grpc.ServiceDesc{
-		ServiceName: "hydra.common.v1.HealthService",
-		HandlerType: (*watchService)(nil),
-		Methods: []grpc.MethodDesc{{
-			MethodName: "Check",
-			Handler: func(_ any, _ context.Context, dec func(any) error, _ grpc.UnaryServerInterceptor) (any, error) {
-				if err := dec(&healthpb.Empty{}); err != nil {
-					return nil, err
-				}
-				n.checks.Add(1)
-				return &healthpb.HealthReport{Identity: &healthpb.NodeIdentity{Name: n.name}, State: healthpb.HealthState_HEALTH_STATE_OK}, nil
-			},
-		}},
-		Streams: []grpc.StreamDesc{{
-			StreamName:    "Watch",
-			ServerStreams: true,
-			Handler: func(_ any, stream grpc.ServerStream) error {
-				if err := stream.RecvMsg(&healthpb.Empty{}); err != nil {
-					return err
-				}
-				for {
-					select {
-					case <-stream.Context().Done():
-						return nil
-					case state := <-n.updates:
-						if err := stream.SendMsg(&healthpb.HealthReport{Identity: &healthpb.NodeIdentity{Name: n.name}, State: state, Detail: "streamed"}); err != nil {
-							return err
-						}
-					}
-				}
-			},
-		}},
+func (n *watchNode) Watch(_ *healthpb.Empty, stream grpc.ServerStreamingServer[healthpb.HealthReport]) error {
+	for {
+		select {
+		case <-stream.Context().Done():
+			return nil
+		case state := <-n.updates:
+			if err := stream.Send(&healthpb.HealthReport{Identity: &healthpb.NodeIdentity{Name: n.name}, State: state, Detail: "streamed"}); err != nil {
+				return err
+			}
+		}
 	}
 }
 
@@ -71,7 +53,7 @@ func startWatchNode(t *testing.T, name string) (string, *watchNode, *grpc.Server
 	}
 	node := &watchNode{name: name, updates: make(chan healthpb.HealthState, 8)}
 	srv := grpc.NewServer()
-	srv.RegisterService(node.desc(), node)
+	healthpb.RegisterHealthServiceServer(srv, node)
 	go func() { _ = srv.Serve(lis) }()
 	return lis.Addr().String(), node, srv
 }
@@ -209,4 +191,59 @@ func TestWatch_AStreamStopsWhenTheNodeLeavesTheRegistry(t *testing.T) {
 	if wd.stillWatches("leaving") {
 		t.Error("a node that left the registry must not be watched any more")
 	}
+}
+
+func TestWatch_ASecondNameOnTheStreamIsInvalid(t *testing.T) {
+	addr, node, srv := startWatchNode(t, "someone-else")
+	defer srv.Stop()
+	reactor := &recordingReactor{}
+	wd := newWatchdog([]Node{{Name: "registered", Address: addr, Watch: true}}, reactor)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() { wd.Run(ctx); close(done) }()
+	defer func() { cancel(); <-done }()
+	node.updates <- healthpb.HealthState_HEALTH_STATE_OK
+	waitUntil(t, 3*time.Second, "INVALID for a report under another name", func() bool { return contains(reactor.snapshot(), "registered:UNKNOWN->INVALID") })
+}
+
+func TestWatch_AStreamThatDropsIsFollowedByACheckAndReconnects(t *testing.T) {
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr := lis.Addr().String()
+	first := &watchNode{name: "flaky", updates: make(chan healthpb.HealthState, 8)}
+	srv := grpc.NewServer()
+	healthpb.RegisterHealthServiceServer(srv, first)
+	go func() { _ = srv.Serve(lis) }()
+
+	reactor := &recordingReactor{}
+	wd := newWatchdog([]Node{{Name: "flaky", Address: addr, Watch: true}}, reactor)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() { wd.Run(ctx); close(done) }()
+	defer func() { cancel(); <-done }()
+
+	first.updates <- healthpb.HealthState_HEALTH_STATE_OK
+	waitUntil(t, 3*time.Second, "the initial state", func() bool { return contains(reactor.snapshot(), "flaky:UNKNOWN->HEALTHY") })
+	srv.Stop()
+	waitUntil(t, 5*time.Second, "the immediate check after the drop", func() bool { return contains(reactor.snapshot(), "flaky:HEALTHY->UNREACHABLE") })
+
+	// the node comes back on the same address: the loop reconnects and the stream reports again
+	lis2, err := net.Listen("tcp", addr)
+	if err != nil {
+		t.Skipf("the port was taken before the node could come back: %v", err)
+	}
+	second := &watchNode{name: "flaky", updates: make(chan healthpb.HealthState, 8)}
+	srv2 := grpc.NewServer()
+	healthpb.RegisterHealthServiceServer(srv2, second)
+	go func() { _ = srv2.Serve(lis2) }()
+	defer srv2.Stop()
+	waitUntil(t, 20*time.Second, "the reconnected stream", func() bool {
+		select {
+		case second.updates <- healthpb.HealthState_HEALTH_STATE_OK:
+		default:
+		}
+		return contains(reactor.snapshot(), "flaky:UNREACHABLE->HEALTHY")
+	})
 }

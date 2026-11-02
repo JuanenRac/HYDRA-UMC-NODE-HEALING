@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The `Watch()` stream uses the typed stubs:** the vendored gRPC stubs now declare `rpc Watch(Empty) returns (stream HealthReport)` (regenerated from the shared contract) and the watchdog follows the typed stream instead of a hand-made stream call.
+- **Documented: ORCHESTRATOR and JOB-DISPATCHER serve `Watch()` on loopback:** the integration contract says how to register them (`address` `127.0.0.1:50114` and `127.0.0.1:50090`, the name that has to match, `"watch": true`) and that the connection is loopback without credentials by decision; `nodes.example.json` lists both.
+- **Tests of the stream against a typed test server:** a node name that differs from the registered one is `INVALID`, and a stream that drops is followed by an immediate check and then reconnects when the node comes back.
+
 - **Changed: fencing is now mandatory by default (this changes the behaviour of 0.2.3).** Before, a recovery was requested without any confirmation unless a fencing file turned fencing on. Now, with `-orchestrator-url`, a recovery is requested only after the cell confirms that the robots of the node are safe. Without `-fencing-config` nothing is requeued at all: every recovery is refused, logged and counted (`hydra_node_healing_fence_refused_total`). A fencing file that does not say `"enabled"` keeps fencing on. The only way back to the old behaviour is to declare it on purpose with `"enabled": false` (and, if wanted, `"disabledReason"`) in the file: the reason is written to the log at start-up with a warning, `-check-config` prints a warning, and `/metrics` shows `hydra_node_healing_fencing_enforced` (1 or 0) and `hydra_node_healing_fencing_info{mode,reason}`. `fencing.example.json` now ships with `"enabled": true`. Tried against stand-in cells only.
 
 ## [0.2.3] - Nodes registered from the swarm announcements, a fencing step before any recovery and a streaming watch of the health reports

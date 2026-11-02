@@ -22,7 +22,6 @@ import (
 	"time"
 
 	healthpb "github.com/JuanenRac/HYDRA-UMC-NODE-HEALING/src/healthpb"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -170,21 +169,15 @@ func (w *Watchdog) watchOnce(ctx context.Context, n Node) (int, error) {
 	}
 	streamCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	stream, err := conn.NewStream(streamCtx, &grpc.StreamDesc{StreamName: "Watch", ServerStreams: true}, WatchFullMethodName)
+	stream, err := healthpb.NewHealthServiceClient(conn).Watch(streamCtx, &healthpb.Empty{})
 	if err != nil {
-		return 0, err
-	}
-	if err := stream.SendMsg(&healthpb.Empty{}); err != nil {
-		return 0, err
-	}
-	if err := stream.CloseSend(); err != nil {
 		return 0, err
 	}
 	reports := 0
 	for {
 		started := time.Now()
-		report := &healthpb.HealthReport{}
-		if err := stream.RecvMsg(report); err != nil {
+		report, err := stream.Recv()
+		if err != nil {
 			if errors.Is(err, io.EOF) {
 				return reports, nil
 			}

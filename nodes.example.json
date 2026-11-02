@@ -1,5 +1,6 @@
 [
-  { "name": "HYDRA-UMC-ORCHESTRATOR", "healthUrl": "http://127.0.0.1:8114/health" },
+  { "name": "HYDRA-UMC-ORCHESTRATOR", "address": "127.0.0.1:50114", "watch": true },
+  { "name": "HYDRA-UMC-JOB-DISPATCHER", "address": "127.0.0.1:50090", "watch": true },
   { "name": "HYDRA-UMC-VOICE-UI", "healthUrl": "http://127.0.0.1:8091/health" },
   { "name": "HYDRA-UMC-DATALAKE", "healthUrl": "http://127.0.0.1:8095/stats" },
   { "name": "HYDRA-UMC-ANOMALY-DETECTOR", "healthUrl": "http://127.0.0.1:8097/stats" },
