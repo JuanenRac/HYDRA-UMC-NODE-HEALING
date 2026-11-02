@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.2.2] - Every health transition published as an event, an incident proposal after a long outage and a file tree that lists the events example
+
 - **Events of the watchdog over MQTT, and proposals of a maintenance incident, both off by default (`--events-config FILE`, `events.example.json`):** with `mqtt.enabled` in the file every transition of a node is also published, as an event envelope of the SDK, on `<topicPrefix>/<node>/state` (retained), so the Studio, the watch, the phone and the dashboard can show the alerts; with `incidentProposals.enabled`, a node that stays down for the time in the file gets ONE proposal in the form of the SDK's maintenance incident on `<topicPrefix>/<node>/incident-proposal`. It only proposes: nothing is opened or stopped, and the part that reads the proposals is not built yet. Publishing goes through a bounded queue and never delays the polling; a broker off this machine needs TLS or an explicit `allowPlaintext`; `GET /metrics` counts what was published, failed and dropped. `-check-config` also checks the file. Tested against a stand-in broker only.
 
 - **The network and system libraries move to releases without known advisories:** `golang.org/x/net` 0.62.0, `golang.org/x/sys` 0.49.0 and `golang.org/x/text` 0.43.0. They need Go 1.26, so the minimum Go of the project goes from 1.25 to 1.26 (`go.mod`, the README and the contributor guide).
