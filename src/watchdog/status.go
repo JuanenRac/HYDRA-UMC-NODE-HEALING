@@ -58,6 +58,14 @@ type RecoveryCounter interface {
 	RecoveryRequests() int64
 }
 
+// EventCounter is implemented by the reactor that publishes events (EventReactor).
+type EventCounter interface {
+	Published() int64
+	Failed() int64
+	Dropped() int64
+	Proposals() int64
+}
+
 // StatusServer serves /health and /metrics.
 type StatusServer struct {
 	Watchdog *Watchdog
@@ -67,6 +75,8 @@ type StatusServer struct {
 	Token string
 	// Recoveries, when set, is read for the recovery request counter.
 	Recoveries RecoveryCounter
+	// Events, when set, adds the counters of the events published over MQTT.
+	Events EventCounter
 	// Now defaults to time.Now.
 	Now func() time.Time
 }
@@ -172,6 +182,12 @@ func (s *StatusServer) metrics(w http.ResponseWriter, r *http.Request) {
 	}
 	if s.Recoveries != nil {
 		fmt.Fprintf(&b, "# HELP hydra_node_healing_recovery_requests_total Recovery requests sent to the orchestrator.\n# TYPE hydra_node_healing_recovery_requests_total counter\nhydra_node_healing_recovery_requests_total %d\n", s.Recoveries.RecoveryRequests())
+	}
+	if s.Events != nil {
+		fmt.Fprintf(&b, "# HELP hydra_node_healing_events_published_total Events published over MQTT.\n# TYPE hydra_node_healing_events_published_total counter\nhydra_node_healing_events_published_total %d\n", s.Events.Published())
+		fmt.Fprintf(&b, "# HELP hydra_node_healing_events_failed_total Events that could not be published.\n# TYPE hydra_node_healing_events_failed_total counter\nhydra_node_healing_events_failed_total %d\n", s.Events.Failed())
+		fmt.Fprintf(&b, "# HELP hydra_node_healing_events_dropped_total Events dropped because the queue was full.\n# TYPE hydra_node_healing_events_dropped_total counter\nhydra_node_healing_events_dropped_total %d\n", s.Events.Dropped())
+		fmt.Fprintf(&b, "# HELP hydra_node_healing_incident_proposals_total Maintenance incident proposals queued.\n# TYPE hydra_node_healing_incident_proposals_total counter\nhydra_node_healing_incident_proposals_total %d\n", s.Events.Proposals())
 	}
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")

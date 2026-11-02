@@ -56,6 +56,7 @@ func main() {
 	journalVerify := flag.Bool("journal-verify", false, "check the hash chain of the file given with -journal and exit")
 	listen := flag.String("listen", "", "address (host:port) for the read-only status endpoint: GET /health (liveness) and GET /metrics (Prometheus); empty serves nothing. A non-loopback address needs -status-token")
 	statusToken := flag.String("status-token", "", "bearer token demanded on /metrics (prefer the STATUS_TOKEN environment variable: a flag value is visible in the process list)")
+	eventsConfigPath := flag.String("events-config", "", "JSON file that turns on the events over MQTT (every transition of a node, and a proposal of a maintenance incident for a node that stays down); empty publishes nothing, as before this flag existed")
 	checkConfig := flag.Bool("check-config", false, "load and validate the node registry given with -nodes, print a summary and exit (0 = valid)")
 	nodesFromPorts := flag.String("nodes-from-ports", "", "print a node registry built from the service registry of the ecosystem (contracts/ports.yaml of the SDK): every service with a health path, probed over HTTP; the services left out are listed on stderr; then exit")
 	flag.Parse()
@@ -116,6 +117,14 @@ func main() {
 			}
 		}
 		fmt.Printf("CONFIG=PASS %d node(s): %d over HTTP, %d over gRPC, %d with a dispatchNode\n", len(nodes), httpNodes, grpcNodes, dispatch)
+		if *eventsConfigPath != "" {
+			events, eventsErr := watchdog.LoadEventsConfig(*eventsConfigPath)
+			if eventsErr != nil {
+				fmt.Printf("EVENTS_CONFIG=FAIL %v\n", eventsErr)
+				os.Exit(1)
+			}
+			fmt.Printf("EVENTS_CONFIG=PASS mqtt %s, incident proposals %s\n", onOff(events.MQTT.Enabled), onOff(events.IncidentProposals.Enabled))
+		}
 		return
 	}
 	if *orchestratorToken == "" {
@@ -198,12 +207,36 @@ func main() {
 			*orchestratorURL, policy.ConfirmAfter, policy.StartupGrace, policy.BudgetMax, policy.Cooldown)
 	}
 
-	wd := watchdog.NewWatchdog(nodes, reactor)
+	var wdReactor watchdog.Reactor = reactor
+	var eventReactor *watchdog.EventReactor
+	if *eventsConfigPath != "" {
+		events, eventsErr := watchdog.LoadEventsConfig(*eventsConfigPath)
+		if eventsErr != nil {
+			fmt.Fprintf(os.Stderr, "[node-healing] fatal: --events-config: %v\n", eventsErr)
+			os.Exit(1)
+		}
+		if events.MQTT.Enabled {
+			target, targetErr := events.Target()
+			if targetErr != nil {
+				fmt.Fprintf(os.Stderr, "[node-healing] fatal: --events-config: %v\n", targetErr)
+				os.Exit(1)
+			}
+			eventReactor = watchdog.NewEventReactor(events, target, printf)
+			go eventReactor.Run(ctx)
+			wdReactor = watchdog.MultiReactor{reactor, eventReactor}
+			fmt.Printf("[node-healing] events: every transition goes to %s/<node>/state on %s; incident proposals %s\n", events.MQTT.TopicPrefix, events.MQTT.Broker, onOff(events.IncidentProposals.Enabled))
+		}
+	}
+
+	wd := watchdog.NewWatchdog(nodes, wdReactor)
 
 	if *listen != "" {
 		status := &watchdog.StatusServer{Watchdog: wd, Version: Version, Started: time.Now(), Token: *statusToken}
 		if counter, ok := reactor.(watchdog.RecoveryCounter); ok {
 			status.Recoveries = counter
+		}
+		if eventReactor != nil {
+			status.Events = eventReactor
 		}
 		go func() {
 			if serveErr := status.Serve(ctx, *listen); serveErr != nil {
@@ -246,4 +279,11 @@ func main() {
 		_ = journal.Record("stop", nil)
 	}
 	fmt.Println("[node-healing] shutting down")
+}
+
+func onOff(on bool) string {
+	if on {
+		return "on"
+	}
+	return "off"
 }

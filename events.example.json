@@ -1,0 +1,20 @@
+{
+  "mqtt": {
+    "enabled": false,
+    "broker": "127.0.0.1:1883",
+    "tls": false,
+    "caFile": "",
+    "clientId": "hydra-umc-node-healing",
+    "usernameFile": "",
+    "passwordFile": "",
+    "allowPlaintext": false,
+    "timeoutSeconds": 5,
+    "topicPrefix": "hydra/health",
+    "queueSize": 64
+  },
+  "incidentProposals": {
+    "enabled": false,
+    "sustainedSeconds": 60,
+    "includeDegraded": false
+  }
+}
