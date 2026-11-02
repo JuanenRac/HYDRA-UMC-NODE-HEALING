@@ -60,6 +60,8 @@ type nodeEntry struct {
 	DispatchNode string `json:"dispatchNode"`
 	// Headers are sent with every HTTP health probe of the node (only with a healthUrl).
 	Headers map[string]string `json:"headers"`
+	// Watch asks for the server-streaming Watch() RPC of the node (only with an "address").
+	Watch bool `json:"watch"`
 }
 
 // LoadNodes reads a JSON array of {"name": "...", "address": "host:port"}
@@ -84,39 +86,9 @@ func LoadNodes(path string) ([]watchdog.Node, error) {
 	nodes := make([]watchdog.Node, 0, len(entries))
 	seen := make(map[string]int, len(entries))
 	for i, e := range entries {
-		if e.Name == "" {
-			return nil, fmt.Errorf("node registry %q: entry %d has no \"name\"", path, i)
-		}
-		if !validNodeName.MatchString(e.Name) {
-			return nil, fmt.Errorf("node registry %q: entry %d has an invalid \"name\" %q - use letters, digits, '.', '_', '-' and ':' (up to 128 characters)", path, i, e.Name)
-		}
-		if e.DispatchNode != "" && !validNodeName.MatchString(e.DispatchNode) {
-			return nil, fmt.Errorf("node registry %q: entry %d (%s) has an invalid \"dispatchNode\" %q", path, i, e.Name, e.DispatchNode)
-		}
-		if e.Address != "" && e.HealthURL != "" {
-			return nil, fmt.Errorf("node registry %q: entry %d (%s) has both an \"address\" and a \"healthUrl\" - choose one probe", path, i, e.Name)
-		}
-		if e.Address != "" {
-			if host, port, aerr := net.SplitHostPort(e.Address); aerr != nil || host == "" || port == "" {
-				return nil, fmt.Errorf("node registry %q: entry %d (%s) has an \"address\" that is not host:port: %q", path, i, e.Name, e.Address)
-			}
-		}
-		if len(e.Headers) > 0 {
-			if e.HealthURL == "" {
-				return nil, fmt.Errorf("node registry %q: entry %d (%s) has \"headers\" but no \"healthUrl\": headers are only sent by the HTTP probe", path, i, e.Name)
-			}
-			if herr := checkHeaders(e.Headers); herr != nil {
-				return nil, fmt.Errorf("node registry %q: entry %d (%s): %v", path, i, e.Name, herr)
-			}
-		}
-		if e.Address == "" && e.HealthURL == "" {
-			return nil, fmt.Errorf("node registry %q: entry %d (%s) has neither an \"address\" nor a \"healthUrl\"", path, i, e.Name)
-		}
-		if e.HealthURL != "" {
-			u, perr := url.Parse(e.HealthURL)
-			if perr != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-				return nil, fmt.Errorf("node registry %q: entry %d (%s) has a \"healthUrl\" that is not an http:// or https:// URL: %q", path, i, e.Name, e.HealthURL)
-			}
+		node, cerr := checkEntry(e)
+		if cerr != nil {
+			return nil, fmt.Errorf("node registry %q: entry %d%s", path, i, cerr)
 		}
 		// Watchdog.state is keyed by Name alone (see watchdog.go), so two
 		// entries sharing a name would silently overwrite each other's
@@ -125,7 +97,50 @@ func LoadNodes(path string) ([]watchdog.Node, error) {
 			return nil, fmt.Errorf("node registry %q: entry %d (%s) duplicates the \"name\" of entry %d - names must be unique", path, i, e.Name, first)
 		}
 		seen[e.Name] = i
-		nodes = append(nodes, watchdog.Node{Name: e.Name, Address: e.Address, HealthURL: e.HealthURL, DispatchNode: e.DispatchNode, Headers: e.Headers})
+		nodes = append(nodes, node)
 	}
 	return nodes, nil
+}
+
+// checkEntry validates one entry of a registry, wherever it came from, and returns the node. A returned error starts with the
+// entry's name in parentheses (or is empty-named), so the caller can put its own position in front.
+func checkEntry(e nodeEntry) (watchdog.Node, error) {
+	if e.Name == "" {
+		return watchdog.Node{}, fmt.Errorf(" has no \"name\"")
+	}
+	if !validNodeName.MatchString(e.Name) {
+		return watchdog.Node{}, fmt.Errorf(" has an invalid \"name\" %q - use letters, digits, '.', '_', '-' and ':' (up to 128 characters)", e.Name)
+	}
+	if e.DispatchNode != "" && !validNodeName.MatchString(e.DispatchNode) {
+		return watchdog.Node{}, fmt.Errorf(" (%s) has an invalid \"dispatchNode\" %q", e.Name, e.DispatchNode)
+	}
+	if e.Address != "" && e.HealthURL != "" {
+		return watchdog.Node{}, fmt.Errorf(" (%s) has both an \"address\" and a \"healthUrl\" - choose one probe", e.Name)
+	}
+	if e.Address != "" {
+		if host, port, aerr := net.SplitHostPort(e.Address); aerr != nil || host == "" || port == "" {
+			return watchdog.Node{}, fmt.Errorf(" (%s) has an \"address\" that is not host:port: %q", e.Name, e.Address)
+		}
+	}
+	if e.Watch && e.Address == "" {
+		return watchdog.Node{}, fmt.Errorf(" (%s) has \"watch\" but no \"address\": only a node probed over gRPC can be watched with a stream", e.Name)
+	}
+	if len(e.Headers) > 0 {
+		if e.HealthURL == "" {
+			return watchdog.Node{}, fmt.Errorf(" (%s) has \"headers\" but no \"healthUrl\": headers are only sent by the HTTP probe", e.Name)
+		}
+		if herr := checkHeaders(e.Headers); herr != nil {
+			return watchdog.Node{}, fmt.Errorf(" (%s): %v", e.Name, herr)
+		}
+	}
+	if e.Address == "" && e.HealthURL == "" {
+		return watchdog.Node{}, fmt.Errorf(" (%s) has neither an \"address\" nor a \"healthUrl\"", e.Name)
+	}
+	if e.HealthURL != "" {
+		u, perr := url.Parse(e.HealthURL)
+		if perr != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+			return watchdog.Node{}, fmt.Errorf(" (%s) has a \"healthUrl\" that is not an http:// or https:// URL: %q", e.Name, e.HealthURL)
+		}
+	}
+	return watchdog.Node{Name: e.Name, Address: e.Address, HealthURL: e.HealthURL, DispatchNode: e.DispatchNode, Headers: e.Headers, Watch: e.Watch}, nil
 }

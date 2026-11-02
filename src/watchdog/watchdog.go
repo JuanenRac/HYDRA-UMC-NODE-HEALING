@@ -105,6 +105,9 @@ type Node struct {
 	// Authorization header for a health route that wants a token). They come from the
 	// registry file, which is the operator's, and their values are never logged.
 	Headers map[string]string
+	// Watch, with an Address, makes the watchdog open the server-streaming Watch() RPC of the node (watchstream.go) and take its
+	// reports as they come, instead of waiting for the next poll. Off unless the registry says so. The poll stays as the safety net.
+	Watch bool
 }
 
 // Reactor receives state-change events. The default used by main() only
@@ -147,8 +150,15 @@ type Watchdog struct {
 	DialOptions  []grpc.DialOption // overridable for tests (in-process bufconn)
 	HTTPClient   *http.Client      // used for nodes with a HealthURL; nil builds one bounded by CheckTimeout
 
+	// WatchFreshFor is how long after a report of a Watch() stream the poll of that node is skipped (watchstream.go); zero means
+	// DefaultWatchFreshFor.
+	WatchFreshFor time.Duration
+
 	mu    sync.Mutex
 	state map[string]Status // keyed by Node.Name
+	// The nodes with a Watch() stream running, and when each one last reported (watchstream.go).
+	watching  map[string]bool
+	lastWatch map[string]time.Time
 	stats map[string]*nodeStats
 	// Nodes whose poll has not finished yet. A tick starts a poll only for the nodes not in it, and does not wait for the
 	// others: a node that answers slowly (or not at all) neither delays the detection of the rest nor piles up polls.
@@ -297,6 +307,10 @@ func (w *Watchdog) Run(ctx context.Context) {
 func (w *Watchdog) startDue(ctx context.Context) *sync.WaitGroup {
 	group := &sync.WaitGroup{}
 	for _, n := range w.currentNodes() {
+		w.startWatch(ctx, n)
+		if w.watchFresh(n) {
+			continue // its stream reported a moment ago: the poll would only repeat it
+		}
 		w.mu.Lock()
 		if w.polling == nil {
 			w.polling = make(map[string]bool)
@@ -333,8 +347,18 @@ func (w *Watchdog) pollAll(ctx context.Context) {
 func (w *Watchdog) pollOne(ctx context.Context, n Node) {
 	started := time.Now()
 	status, detail := w.checkNode(ctx, n)
-	latency := time.Since(started)
+	w.observe(n, status, detail, started, time.Since(started))
+}
+
+// observe records what a poll (or a Watch stream) saw of a node and fires the reactor when the classification changed.
+func (w *Watchdog) observe(n Node, status Status, detail string, started time.Time, latency time.Duration) {
 	w.mu.Lock()
+	if w.state == nil {
+		w.state = make(map[string]Status)
+	}
+	if w.stats == nil {
+		w.stats = make(map[string]*nodeStats)
+	}
 	prev, seen := w.state[n.Name]
 	w.state[n.Name] = status
 	stats := w.stats[n.Name]
@@ -421,6 +445,12 @@ func (w *Watchdog) attemptCheck(ctx context.Context, n Node) (status Status, det
 		return StatusUnreachable, err.Error(), true
 	}
 
+	return classifyReport(n, report)
+}
+
+// classifyReport turns the report of a node (the answer of Check() or one message of Watch()) into a Status. A node that
+// cannot say who it is, or says another name, is INVALID and its health is not trusted.
+func classifyReport(n Node, report *healthpb.HealthReport) (status Status, detail string, retryable bool) {
 	identity := report.GetIdentity()
 	if identity == nil || identity.GetName() == "" {
 		return StatusInvalid, fmt.Sprintf("node at %s answered but reported no self-identity - refusing to trust its health state", n.Address), false

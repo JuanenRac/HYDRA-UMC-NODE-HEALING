@@ -1,0 +1,13 @@
+{
+  "enabled": false,
+  "mode": "confirm",
+  "holdUrl": "http://127.0.0.1:8080/api/robots/{node}/hold",
+  "statusUrl": "http://127.0.0.1:8080/api/robots/{node}/state",
+  "tokenFile": "",
+  "safeStates": ["stopped", "held", "isolated"],
+  "confirmTimeoutSeconds": 10,
+  "pollMillis": 500,
+  "leaseTtlSeconds": 0,
+  "marginSeconds": 5,
+  "allowPlaintext": false
+}

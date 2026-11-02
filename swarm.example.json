@@ -1,0 +1,12 @@
+{
+  "enabled": false,
+  "url": "http://127.0.0.1:8112",
+  "tokenFile": "",
+  "keyPrefix": "healing/node/",
+  "signingKeyFile": "/etc/hydra-umc/node-healing/announce.key",
+  "requireSignature": true,
+  "refreshSeconds": 30,
+  "timeoutSeconds": 5,
+  "maxEntries": 256,
+  "allowPlaintext": false
+}

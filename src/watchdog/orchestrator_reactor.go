@@ -133,14 +133,21 @@ type OrchestratorReactor struct {
 	// Lease, when set, is the lease of this healer at the orchestrator: a recovery is requested only while this watchdog holds it, and
 	// the request carries the proof. Nil keeps the old behaviour (no lease).
 	Lease *Lease
+	// Fencer, when set, must confirm that the robots of a node are safe before a recovery is requested for it (fencing.go). When it
+	// does not, nothing is requested and the missions stay where they are. Nil keeps the old behaviour (no fencing).
+	Fencer Fencer
 
-	requests atomic.Int64 // recovery POSTs sent, whatever the answer
+	requests     atomic.Int64
+	fenceRefused atomic.Int64
+	fenced       atomic.Int64 // recovery POSTs sent, whatever the answer
 
 	mu         sync.Mutex
 	pending    map[string]context.CancelFunc // node name -> cancel for its in-flight confirmation or retry, if any
 	startedAt  time.Time
 	lastByNode map[string]time.Time
 	recent     []time.Time // times of recovery requests inside the budget window
+	// failingSince is when each node entered the failing states that ask for a recovery (fencing in "lease" mode needs it).
+	failingSince map[string]time.Time
 }
 
 func (r *OrchestratorReactor) now() time.Time {
@@ -195,6 +202,19 @@ func (r *OrchestratorReactor) OnTransition(node Node, from, to Status, detail st
 	// fresh failing event should restart the wait. Cancelling first,
 	// unconditionally, keeps exactly one pending action per node alive.
 	r.cancelPendingLocked(node.Name)
+
+	r.mu.Lock()
+	if r.recoverable(to) {
+		if r.failingSince == nil {
+			r.failingSince = make(map[string]time.Time)
+		}
+		if _, failing := r.failingSince[node.Name]; !failing {
+			r.failingSince[node.Name] = r.now()
+		}
+	} else {
+		delete(r.failingSince, node.Name)
+	}
+	r.mu.Unlock()
 
 	if !r.recoverable(to) {
 		return
@@ -298,6 +318,12 @@ func (r *OrchestratorReactor) recoverNow(ctx context.Context, node Node, target 
 	r.startBackgroundRetry(node, target)
 }
 
+// FenceRefusals is how many times fencing did not confirm the robots and the recovery was held back.
+func (r *OrchestratorReactor) FenceRefusals() int64 { return r.fenceRefused.Load() }
+
+// FenceConfirmations is how many times fencing confirmed the robots and the recovery went on.
+func (r *OrchestratorReactor) FenceConfirmations() int64 { return r.fenced.Load() }
+
 // RecoveryRequests is how many recovery requests were sent to the Orchestrator, whatever the answer.
 func (r *OrchestratorReactor) RecoveryRequests() int64 { return r.requests.Load() }
 
@@ -315,6 +341,23 @@ func (r *OrchestratorReactor) attemptRecovery(ctx context.Context, node Node, ta
 	client := r.Client
 	if client == nil {
 		client = &http.Client{Timeout: defaultRecoveryTimeout}
+	}
+	if r.Fencer != nil {
+		r.mu.Lock()
+		since, known := r.failingSince[node.Name]
+		r.mu.Unlock()
+		failingFor := time.Duration(0)
+		if known {
+			failingFor = r.now().Sub(since)
+		}
+		verdict := r.Fencer.Fence(ctx, node, target, failingFor)
+		if !verdict.Safe {
+			r.fenceRefused.Add(1)
+			r.printf("[node-healing] recovery for %s NOT requested: the robots of %s are not confirmed safe (%s); no mission is requeued\n", node.Name, target, verdict.Reason)
+			return recoveryTransient
+		}
+		r.fenced.Add(1)
+		r.printf("[node-healing] fencing confirmed for %s (dispatch node %s): %s\n", node.Name, target, verdict.Reason)
 	}
 	endpoint := fmt.Sprintf("%s/nodes/%s/recover", strings.TrimSuffix(r.BaseURL, "/"), url.PathEscape(target))
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)

@@ -58,6 +58,12 @@ type RecoveryCounter interface {
 	RecoveryRequests() int64
 }
 
+// FenceCounter is implemented by a Reactor that fences the robots before it asks for a recovery.
+type FenceCounter interface {
+	FenceRefusals() int64
+	FenceConfirmations() int64
+}
+
 // EventCounter is implemented by the reactor that publishes events (EventReactor).
 type EventCounter interface {
 	Published() int64
@@ -75,6 +81,8 @@ type StatusServer struct {
 	Token string
 	// Recoveries, when set, is read for the recovery request counter.
 	Recoveries RecoveryCounter
+	// Fences, when set, adds the counters of fencing.
+	Fences FenceCounter
 	// Events, when set, adds the counters of the events published over MQTT.
 	Events EventCounter
 	// Now defaults to time.Now.
@@ -182,6 +190,10 @@ func (s *StatusServer) metrics(w http.ResponseWriter, r *http.Request) {
 	}
 	if s.Recoveries != nil {
 		fmt.Fprintf(&b, "# HELP hydra_node_healing_recovery_requests_total Recovery requests sent to the orchestrator.\n# TYPE hydra_node_healing_recovery_requests_total counter\nhydra_node_healing_recovery_requests_total %d\n", s.Recoveries.RecoveryRequests())
+	}
+	if s.Fences != nil {
+		fmt.Fprintf(&b, "# HELP hydra_node_healing_fence_confirmed_total Recoveries that went on because the robots were confirmed safe.\n# TYPE hydra_node_healing_fence_confirmed_total counter\nhydra_node_healing_fence_confirmed_total %d\n", s.Fences.FenceConfirmations())
+		fmt.Fprintf(&b, "# HELP hydra_node_healing_fence_refused_total Recoveries held back because the robots were not confirmed safe.\n# TYPE hydra_node_healing_fence_refused_total counter\nhydra_node_healing_fence_refused_total %d\n", s.Fences.FenceRefusals())
 	}
 	if s.Events != nil {
 		fmt.Fprintf(&b, "# HELP hydra_node_healing_events_published_total Events published over MQTT.\n# TYPE hydra_node_healing_events_published_total counter\nhydra_node_healing_events_published_total %d\n", s.Events.Published())

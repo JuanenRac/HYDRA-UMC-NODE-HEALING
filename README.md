@@ -18,14 +18,14 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Feature-Self--Healing-green.svg" alt="Feature">
   <img src="https://img.shields.io/badge/Platform-Distributed%20Edge-blue.svg" alt="Platform">
-  <img src="https://img.shields.io/badge/Tests-122%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-168%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.2.2-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
 
 ---
 
-**Honesty check - what actually runs today:** the polling/classification loop (`src/watchdog/watchdog.go`), the bounded retry policy (`src/watchdog/retry.go`), the real recovery-request wiring to HYDRA-UMC-ORCHESTRATOR (`src/watchdog/orchestrator_reactor.go`), and the static node-registry loader (`src/config/config.go`) are all real and tested (122 tests passing across `src/config` and `src/watchdog`) - and these are real gRPC round-trips over real loopback sockets, not a mocked client. What is a known, documented gap: the node registry is a static JSON file (`nodes.json`), not a live query to HYDRA-UMC-SWARM-SYNC, because that project has no real API yet either to query - this is the honest v0, not a placeholder pretending to be dynamic. Rerouting the actual in-flight mission work away from a failed node is also not this repository's job - it requests recovery through `OrchestratorReactor` and stops there; the next layer up (actually moving jobs) lives elsewhere. The 4 roadmap phases (digital-twin sync, Isaac Sim physics integration, automated recovery patterns, AI-driven predictive healing) are aspirational future work with no code behind them yet. See `CHANGELOG.md` for exactly what has shipped so far.
+**Honesty check - what actually runs today:** the polling/classification loop (`src/watchdog/watchdog.go`), the bounded retry policy (`src/watchdog/retry.go`), the real recovery-request wiring to HYDRA-UMC-ORCHESTRATOR (`src/watchdog/orchestrator_reactor.go`), and the static node-registry loader (`src/config/config.go`) are all real and tested (168 tests passing across `src/config` and `src/watchdog`) - and these are real gRPC round-trips over real loopback sockets, not a mocked client. What is a known, documented gap: the node registry is a static JSON file (`nodes.json`), not a live query to HYDRA-UMC-SWARM-SYNC, because that project has no real API yet either to query - this is the honest v0, not a placeholder pretending to be dynamic. Rerouting the actual in-flight mission work away from a failed node is also not this repository's job - it requests recovery through `OrchestratorReactor` and stops there; the next layer up (actually moving jobs) lives elsewhere. The 4 roadmap phases (digital-twin sync, Isaac Sim physics integration, automated recovery patterns, AI-driven predictive healing) are aspirational future work with no code behind them yet. See `CHANGELOG.md` for exactly what has shipped so far.
 
 ---
 
@@ -39,7 +39,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | Version | `0.2.2` |
 | Maturity | Functional |
-| Tests | 122 (`go test ./...`) |
+| Tests | 168 (`go test ./...`) |
 | Stack | Go / gRPC health checks / HTTP health probes |
 | Target | The Raspberry Pi CM5 of a HYDRA-UMC cell |
 | On real hardware | Not yet: no run on real hardware is recorded for this version |
@@ -55,7 +55,7 @@ Each line is one part of this repository and the light says how far it is today.
 | Area | State | What it means here |
 |---|---|---|
 | Software | 🟡 | Works for its main purpose; the honesty check above lists what is still missing |
-| Tests | 🟢 | 122 automated tests, run on every change |
+| Tests | 🟢 | 168 automated tests, run on every change |
 | Real hardware | 🔴 | Not yet: no run on real hardware is recorded for this version |
 | Interface and protocols | 🟡 | The routes or messages it offers are documented and tested with a client; not every client has used them yet |
 | Integration | 🟠 | Its messages and routes are checked against the shared contracts of the SDK; it has not run together with the real equipment |
@@ -111,7 +111,9 @@ flowchart TB
 * **Why the real logic lives under `src/`, not at the repo root.** `src/healthpb` (generated gRPC stubs), `src/watchdog` (the polling engine) and `src/config` (the node registry loader) hold the actual implementation; `main.go`/`version.go` stay at the repo root as the entry point that wires them together.
 * **Why detection is separate from the orchestrator it protects.** A node-healing watchdog that ran INSIDE the orchestrator process couldn't detect that same process hanging - running as an independent service is what makes 'detect an unresponsive node and reroute its work' actually possible, including when the unresponsive node is the orchestrator itself.
 * **Detection AND real failover are both wired now.** `src/watchdog` polls every registered node's `HealthService.Check()` (the shared `hydra.common.v1` gRPC contract from `HYDRA-UMC-ORCHESTRATOR/proto/hydra_common.proto`) on a real interval over a real network connection, classifies HEALTHY/DEGRADED/UNHEALTHY/UNREACHABLE, and fires a `Reactor` callback on every state *change* (never every tick). `OrchestratorReactor` (`src/watchdog/orchestrator_reactor.go`) is the real `Reactor` implementation used in production: it calls HYDRA-UMC-ORCHESTRATOR's own `POST /nodes/:node/recover` on a transition into an unhealthy state, requesting a real recovery action rather than just logging the detection.
-* **Why the node registry is a static JSON file, not a live query to HYDRA-UMC-SWARM-SYNC.** SWARM-SYNC (the README's original stated source of truth for "every cell in the swarm") has no real API yet either - it's still andamiaje. A static `nodes.json` (see `nodes.example.json`) is the honest v0, not a placeholder pretending to be dynamic. Swap `src/config.LoadNodes` for a real SWARM-SYNC client once that project has one to call.
+* **The node registry is a static JSON file, optionally completed from HYDRA-UMC-SWARM-SYNC.** `nodes.json` (see `nodes.example.json`) stays the base. With `-swarm-config FILE` (see `swarm.example.json`, off by default) the watchdog also reads `GET /state` of SWARM-SYNC and adds the nodes announced under `healing/node/<name>`: each announcement carries an HMAC-SHA256 signature that only the holders of the operator's key can make, goes through the same checks as a line of the file, and is left out (and counted) if it fails them; a static entry wins over an announced one with the same name, and a read that fails leaves the nodes as they were. *(tried against a stand-in SWARM-SYNC; SWARM-SYNC itself does not write these announcements yet)*
+* **Fencing before a recovery, off by default.** With `-fencing-config FILE` (see `fencing.example.json`) a recovery request leaves only after the robots of the node are confirmed safe: the cell is asked to hold them and its state must read stopped, held or isolated (or, in lease mode, the node must have been failing for longer than the lease of the robot plus a margin). A cell that does not answer, answers badly or says another state is a refusal, nothing is requeued and the refusal is logged and counted. *(tried against a stand-in cell; the routes of the real cell are not defined yet)*
+* **Detection without polling, off by default.** A node entry with `"watch": true` and an `address` makes the watchdog open the server-streaming `Watch()` of the health service and take its reports as they come; the poll stays as the safety net, and a stream that breaks is followed at once by a check. *(tried against a stand-in gRPC server: no node serves `Watch()` yet and the shared contract does not declare it)*
 * 🩺 **Probes the services that exist, over HTTP, and sends its token (v0):** an entry in `nodes.json` can carry a `healthUrl` (`http://…` or `https://…`) instead of a gRPC `address`: the watchdog sends one `GET` and classifies the answer — `2xx` healthy (a JSON `status` of `degraded`/`unhealthy` is honoured, and a JSON `name` that differs from the registry name is `INVALID`), `5xx` unhealthy, no answer `UNREACHABLE` (retried), a redirect or a `4xx` `INVALID` (a wrong URL or a missing credential is configuration, not a node failure, so it is never retried, and redirects are never followed). Until now every node was probed over a gRPC `HealthService` that no service of the ecosystem implements, so a perfectly healthy service was reported `UNREACHABLE`. The recovery request to the orchestrator carries `Authorization: Bearer` when `-orchestrator-token` / `ORCHESTRATOR_TOKEN` is set (an orchestrator on a network address refuses it otherwise), and the node name is escaped as one path segment. *(implemented)*
 * **How this fits the rest of the ecosystem.** A sibling service under HYDRA-UMC-ORCHESTRATOR - watches every node in its registry, reports state changes, and now requests real recovery through `OrchestratorReactor` when one goes unhealthy; rerouting the actual in-flight work away from that node is the next layer above this.
 * **Why a transport failure is retried (bounded) but an identity mismatch never is.** A connection refused or an RPC timeout can be a genuinely transient blip - a node mid-restart, a brief network hiccup - so `checkNode` retries it up to `RetryPolicy.MaxAttempts` times with exponential backoff before giving up. A node that answers but reports the wrong name (or none at all) is a different kind of problem entirely: no amount of waiting fixes a service bound to the wrong port, so that case is classified `StatusInvalid` immediately, with zero retries.
@@ -131,7 +133,7 @@ go test ./...
 
 ## 🧪 Testing
 
-122 automated tests run with `go test ./...`. Each count is a top-level Go test; the sub-tests are not added. They need no hardware.
+168 automated tests run with `go test ./...`. Each count is a top-level Go test; the sub-tests are not added. They need no hardware.
 
 The CI runs `HYDRA_UMC_CI=1 python tools/ci_validate.py`, which checks the manifest, the documents, the eight READMEs and the pictures.
 
@@ -196,6 +198,8 @@ HYDRA-UMC-NODE-HEALING/
 ├── .github/                    CI workflow and issue templates
 ├── nodes.example.json          example node registry
 ├── events.example.json         example of the events file
+├── swarm.example.json          example of the SWARM-SYNC registry file
+├── fencing.example.json        example of the fencing file
 ├── go.mod / go.sum             Go module definition
 ├── version.go                  const Version = "X.Y.Z" (go.mod has no app version field)
 ├── main.go                     Entry point: loads the registry, runs the watchdog

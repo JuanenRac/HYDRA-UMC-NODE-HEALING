@@ -18,14 +18,14 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Feature-Self--Healing-green.svg" alt="Feature">
   <img src="https://img.shields.io/badge/Platform-Distributed%20Edge-blue.svg" alt="Platform">
-  <img src="https://img.shields.io/badge/Tests-122%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-168%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.2.2-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
 
 ---
 
-**Ehrlichkeitscheck - was heute wirklich läuft:** die Polling-/Klassifizierungsschleife (`src/watchdog/watchdog.go`), die begrenzte Retry-Richtlinie (`src/watchdog/retry.go`), die echte Verdrahtung der Wiederherstellungsanfrage an HYDRA-UMC-ORCHESTRATOR (`src/watchdog/orchestrator_reactor.go`) und der statische Node-Registry-Loader (`src/config/config.go`) sind alle real und getestet (122 bestandene Tests über `src/config` und `src/watchdog`) - und das sind echte gRPC-Roundtrips über echte Loopback-Sockets, kein simulierter Client. Was eine bekannte, dokumentierte Lücke ist: die Node-Registry ist eine statische JSON-Datei (`nodes.json`), keine Live-Abfrage an HYDRA-UMC-SWARM-SYNC, weil auch dieses Projekt noch keine echte API dafür hat - das ist die ehrliche v0, kein Platzhalter, der Dynamik vortäuscht. Auch das Umleiten der tatsächlich laufenden Missionsarbeit weg von einem ausgefallenen Knoten ist nicht die Aufgabe dieses Repositories - es fordert Wiederherstellung über `OrchestratorReactor` an und hört dort auf; die nächste Schicht (Jobs tatsächlich verschieben) liegt anderswo. Die 4 Roadmap-Phasen (Digital-Twin-Synchronisation, Isaac-Sim-Physikintegration, automatisierte Wiederherstellungsmuster, KI-gestützte prädiktive Heilung) sind angestrebte Zukunftsarbeit ohne jeglichen Code dahinter bisher. Siehe `CHANGELOG.md` für das, was bisher genau ausgeliefert wurde.
+**Ehrlichkeitscheck - was heute wirklich läuft:** die Polling-/Klassifizierungsschleife (`src/watchdog/watchdog.go`), die begrenzte Retry-Richtlinie (`src/watchdog/retry.go`), die echte Verdrahtung der Wiederherstellungsanfrage an HYDRA-UMC-ORCHESTRATOR (`src/watchdog/orchestrator_reactor.go`) und der statische Node-Registry-Loader (`src/config/config.go`) sind alle real und getestet (168 bestandene Tests über `src/config` und `src/watchdog`) - und das sind echte gRPC-Roundtrips über echte Loopback-Sockets, kein simulierter Client. Was eine bekannte, dokumentierte Lücke ist: die Node-Registry ist eine statische JSON-Datei (`nodes.json`), keine Live-Abfrage an HYDRA-UMC-SWARM-SYNC, weil auch dieses Projekt noch keine echte API dafür hat - das ist die ehrliche v0, kein Platzhalter, der Dynamik vortäuscht. Auch das Umleiten der tatsächlich laufenden Missionsarbeit weg von einem ausgefallenen Knoten ist nicht die Aufgabe dieses Repositories - es fordert Wiederherstellung über `OrchestratorReactor` an und hört dort auf; die nächste Schicht (Jobs tatsächlich verschieben) liegt anderswo. Die 4 Roadmap-Phasen (Digital-Twin-Synchronisation, Isaac-Sim-Physikintegration, automatisierte Wiederherstellungsmuster, KI-gestützte prädiktive Heilung) sind angestrebte Zukunftsarbeit ohne jeglichen Code dahinter bisher. Siehe `CHANGELOG.md` für das, was bisher genau ausgeliefert wurde.
 
 ---
 
@@ -39,7 +39,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | Version | `0.2.2` |
 | Reifegrad | Funktionsfähig |
-| Tests | 122 (`go test ./...`) |
+| Tests | 168 (`go test ./...`) |
 | Technik | Go / gRPC health checks / HTTP health probes |
 | Ziel | Der Raspberry Pi CM5 einer HYDRA-UMC-Zelle |
 | Auf echter Hardware | Noch nicht: für diese Version ist kein Lauf auf echter Hardware vermerkt |
@@ -55,7 +55,7 @@ Jede Zeile ist ein Teil dieses Repositorys, und die Ampel sagt, wie weit er heut
 | Bereich | Stand | Was das hier bedeutet |
 |---|---|---|
 | Software | 🟡 | Funktioniert für seinen Hauptzweck; die Ehrlichkeitsprüfung oben nennt, was noch fehlt |
-| Tests | 🟢 | 122 automatische Tests, bei jeder Änderung ausgeführt |
+| Tests | 🟢 | 168 automatische Tests, bei jeder Änderung ausgeführt |
 | Echte Hardware | 🔴 | Noch nicht: für diese Version ist kein Lauf auf echter Hardware vermerkt |
 | Schnittstelle und Protokolle | 🟡 | Die angebotenen Routen oder Nachrichten sind dokumentiert und mit einem Client getestet; noch nicht jeder Client hat sie benutzt |
 | Integration | 🟠 | Seine Nachrichten und Routen werden gegen die gemeinsamen Verträge des SDK geprüft; es lief noch nicht zusammen mit der echten Ausrüstung |
@@ -111,7 +111,9 @@ flowchart TB
 * **Warum die echte Logik unter `src/` liegt, nicht im Repo-Root.** `src/healthpb` (generierte gRPC-Stubs), `src/watchdog` (die Polling-Engine) und `src/config` (der Knotenregister-Lader) enthalten die eigentliche Implementierung; `main.go`/`version.go` bleiben im Repo-Root als der Einstiegspunkt, der sie verbindet.
 * **Warum die Erkennung vom Orchestrator getrennt ist, den sie schützt.** Ein Node-Healing-Watchdog, der INNERHALB des Orchestrator-Prozesses liefe, könnte nicht erkennen, dass genau dieser Prozess hängt - als unabhängiger Dienst zu laufen ist das, was 'einen nicht reagierenden Knoten erkennen und seine Arbeit umleiten' überhaupt erst möglich macht, auch wenn der nicht reagierende Knoten der Orchestrator selbst ist.
 * **Erkennung UND echtes Failover sind jetzt beide angebunden.** `src/watchdog` fragt bei jedem registrierten Knoten `HealthService.Check()` ab (den geteilten `hydra.common.v1`-gRPC-Vertrag aus `HYDRA-UMC-ORCHESTRATOR/proto/hydra_common.proto`), in einem echten Intervall über eine echte Netzwerkverbindung, klassifiziert das Ergebnis als HEALTHY/DEGRADED/UNHEALTHY/UNREACHABLE und löst einen `Reactor`-Callback nur bei einer tatsächlichen Zustands*änderung* aus (nie bei jedem Zyklus). `OrchestratorReactor` (`src/watchdog/orchestrator_reactor.go`) ist die echte, produktiv genutzte `Reactor`-Implementierung: sie ruft bei jedem Übergang in einen ungesunden Zustand HYDRA-UMC-ORCHESTRATORs eigenes `POST /nodes/:node/recover` auf und fordert damit eine echte Wiederherstellungsaktion an, statt die Erkennung nur zu protokollieren.
-* **Warum das Knotenregister eine statische JSON-Datei ist und keine Live-Abfrage an HYDRA-UMC-SWARM-SYNC.** SWARM-SYNC (die vom README ursprünglich genannte Quelle der Wahrheit für "jede Zelle des Schwarms") hat ebenfalls noch keine echte API - es befindet sich noch im Andamiaje-Stadium. Ein statisches `nodes.json` (siehe `nodes.example.json`) ist das ehrliche v0, kein Platzhalter, der dynamisch vorgibt zu sein. `src/config.LoadNodes` gegen einen echten SWARM-SYNC-Client austauschen, sobald dieses Projekt einen hat.
+* **Das Knotenregister ist eine statische JSON-Datei, die optional aus HYDRA-UMC-SWARM-SYNC ergänzt wird.** `nodes.json` (siehe `nodes.example.json`) bleibt die Grundlage. Mit `-swarm-config DATEI` (siehe `swarm.example.json`, standardmäßig aus) liest der Wächter zusätzlich `GET /state` von SWARM-SYNC und fügt die unter `healing/node/<Name>` angekündigten Knoten hinzu: Jede Ankündigung trägt eine HMAC-SHA256-Signatur, die nur Inhaber des Betreiberschlüssels erzeugen können, durchläuft dieselben Prüfungen wie eine Zeile der Datei und wird bei einem Fehler ausgelassen (und gezählt); ein statischer Eintrag gewinnt gegen einen angekündigten gleichen Namens, und ein fehlgeschlagenes Lesen lässt die Knoten, wie sie waren. *(gegen ein simuliertes SWARM-SYNC getestet; SWARM-SYNC schreibt diese Ankündigungen selbst noch nicht)*
+* **Fencing vor einer Wiederherstellung, standardmäßig aus.** Mit `-fencing-config DATEI` (siehe `fencing.example.json`) verlässt eine Wiederherstellungsanfrage den Wächter erst, wenn die Roboter des Knotens als sicher bestätigt sind: Die Zelle wird gebeten, sie anzuhalten, und ihr Zustand muss gestoppt, gehalten oder isoliert lauten (im Lease-Modus muss der Knoten länger ausgefallen sein als die Lease des Roboters plus Reserve). Eine Zelle, die nicht antwortet, falsch antwortet oder einen anderen Zustand nennt, ist eine Ablehnung: Nichts wird neu eingereiht, die Ablehnung wird protokolliert und gezählt. *(gegen eine simulierte Zelle getestet; die Routen der echten Zelle sind noch nicht definiert)*
+* **Erkennung ohne Abfragen, standardmäßig aus.** Ein Knoteneintrag mit `"watch": true` und einer `address` lässt den Wächter das Server-Streaming-`Watch()` des Gesundheitsdienstes öffnen und dessen Berichte übernehmen, sobald sie kommen; die Abfrage bleibt als Sicherheitsnetz, und auf einen abgerissenen Stream folgt sofort eine Prüfung. *(gegen einen simulierten gRPC-Server getestet: Kein Knoten bietet `Watch()` bisher an, und der gemeinsame Vertrag deklariert es nicht)*
 * 🩺 **Prüft die Dienste, die es gibt, per HTTP und sendet sein Token (v0):** Ein Eintrag in `nodes.json` kann statt einer gRPC-`address` eine `healthUrl` (`http://…` oder `https://…`) tragen: Der Watchdog sendet ein `GET` und klassifiziert die Antwort — `2xx` gesund (ein JSON-`status` von `degraded`/`unhealthy` wird beachtet, und ein JSON-`name`, der vom Registernamen abweicht, ist `INVALID`), `5xx` ungesund, keine Antwort `UNREACHABLE` (wird wiederholt), eine Weiterleitung oder ein `4xx` `INVALID` (eine falsche URL oder ein fehlendes Credential ist Konfiguration, kein Knotenausfall, wird also nie wiederholt, und Weiterleitungen werden nie verfolgt). Bisher wurde jeder Knoten über einen gRPC-`HealthService` geprüft, den kein Dienst des Ökosystems implementiert, sodass ein völlig gesunder Dienst als `UNREACHABLE` gemeldet wurde. Die Wiederherstellungsanfrage an den Orchestrator trägt `Authorization: Bearer`, wenn `-orchestrator-token` / `ORCHESTRATOR_TOKEN` gesetzt ist (ein Orchestrator auf einer Netzwerkadresse lehnt sie sonst ab), und der Knotenname wird als ein einzelnes Pfadsegment maskiert. *(implementiert)*
 * **Wie sich das ins restliche Ökosystem einfügt.** Ein Geschwisterdienst unter HYDRA-UMC-ORCHESTRATOR - überwacht jeden Knoten in seinem Register, meldet Zustandsänderungen und fordert jetzt über `OrchestratorReactor` eine echte Wiederherstellung an, sobald einer nicht mehr gesund ist; die eigentliche laufende Arbeit von diesem Knoten wegzuleiten ist die nächste Schicht darüber.
 * **Warum ein Transportfehler wiederholt wird (begrenzt), eine falsche Identität aber niemals.** Eine abgelehnte Verbindung oder ein RPC-Timeout kann ein wirklich vorübergehender Ausfall sein - ein neu startender Knoten, ein kurzer Netzwerk-Hänger - daher wiederholt `checkNode` bis zu `RetryPolicy.MaxAttempts` Mal mit exponentiellem Backoff, bevor es aufgibt. Ein Knoten, der antwortet, aber den falschen Namen (oder gar keinen) meldet, ist ein völlig anderes Problem: Kein Warten repariert einen Dienst, der am falschen Port hängt - daher wird dieser Fall sofort als `StatusInvalid` klassifiziert, ganz ohne Wiederholung.
@@ -131,7 +133,7 @@ go test ./...
 
 ## 🧪 Tests
 
-122 automatische Tests laufen mit `go test ./...`. Jede Zahl ist ein Go-Test der obersten Ebene; Untertests werden nicht addiert. Sie brauchen keine Hardware.
+168 automatische Tests laufen mit `go test ./...`. Jede Zahl ist ein Go-Test der obersten Ebene; Untertests werden nicht addiert. Sie brauchen keine Hardware.
 
 Die CI führt `HYDRA_UMC_CI=1 python tools/ci_validate.py` aus; das prüft das Manifest, die Dokumente, die acht READMEs und die Bilder.
 
@@ -197,6 +199,8 @@ HYDRA-UMC-NODE-HEALING/
 ├── .github/                    CI-Workflow und Issue-Vorlagen
 ├── nodes.example.json          Beispiel-Knotenregister
 ├── events.example.json         Beispiel der Ereignisdatei
+├── swarm.example.json          Beispiel der SWARM-SYNC-Registerdatei
+├── fencing.example.json        Beispiel der Fencing-Datei
 ├── go.mod / go.sum             Go-Modul-Definition
 ├── version.go                  const Version = "X.Y.Z" (go.mod hat kein solches Feld)
 ├── main.go                     Einstiegspunkt: lädt das Register und startet den Watchdog

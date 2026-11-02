@@ -343,6 +343,52 @@
           }
         },
         {
+          "name": "swarm.example.json",
+          "desc": {
+            "en": "example of the SWARM-SYNC registry file",
+            "es": "ejemplo del fichero del registro de SWARM-SYNC",
+            "de": "Beispiel der SWARM-SYNC-Registerdatei",
+            "fr": "exemple du fichier du registre SWARM-SYNC",
+            "it": "esempio del file del registro SWARM-SYNC",
+            "ja": "SWARM-SYNC レジストリファイルの例",
+            "zh": "SWARM-SYNC 注册表文件示例",
+            "pt": "exemplo do ficheiro do registo SWARM-SYNC"
+          },
+          "tree_desc": {
+            "en": "example of the SWARM-SYNC registry file",
+            "es": "ejemplo del fichero del registro de SWARM-SYNC",
+            "de": "Beispiel der SWARM-SYNC-Registerdatei",
+            "fr": "exemple du fichier du registre SWARM-SYNC",
+            "it": "esempio del file del registro SWARM-SYNC",
+            "ja": "SWARM-SYNC レジストリファイルの例",
+            "zh": "SWARM-SYNC 注册表文件示例",
+            "pt": "exemplo do ficheiro do registo SWARM-SYNC"
+          }
+        },
+        {
+          "name": "fencing.example.json",
+          "desc": {
+            "en": "example of the fencing file",
+            "es": "ejemplo del fichero de aislamiento",
+            "de": "Beispiel der Fencing-Datei",
+            "fr": "exemple du fichier d'isolement",
+            "it": "esempio del file di isolamento",
+            "ja": "フェンシングファイルの例",
+            "zh": "隔离文件示例",
+            "pt": "exemplo do ficheiro de isolamento"
+          },
+          "tree_desc": {
+            "en": "example of the fencing file",
+            "es": "ejemplo del fichero de aislamiento",
+            "de": "Beispiel der Fencing-Datei",
+            "fr": "exemple du fichier d'isolement",
+            "it": "esempio del file di isolamento",
+            "ja": "フェンシングファイルの例",
+            "zh": "隔离文件示例",
+            "pt": "exemplo do ficheiro de isolamento"
+          }
+        },
+        {
           "name": "go.mod / go.sum",
           "desc": {
             "en": "Go module definition",

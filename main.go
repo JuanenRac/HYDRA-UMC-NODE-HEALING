@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"os/signal"
 	"syscall"
 	"time"
@@ -57,6 +58,8 @@ func main() {
 	listen := flag.String("listen", "", "address (host:port) for the read-only status endpoint: GET /health (liveness) and GET /metrics (Prometheus); empty serves nothing. A non-loopback address needs -status-token")
 	statusToken := flag.String("status-token", "", "bearer token demanded on /metrics (prefer the STATUS_TOKEN environment variable: a flag value is visible in the process list)")
 	eventsConfigPath := flag.String("events-config", "", "JSON file that turns on the events over MQTT (every transition of a node, and a proposal of a maintenance incident for a node that stays down); empty publishes nothing, as before this flag existed")
+	swarmConfigPath := flag.String("swarm-config", "", "JSON file that adds to the registry the nodes announced in the state of SWARM-SYNC, with signed entries (see docs/INTEGRATION_CONTRACT.md); empty uses only the registry file, as before this flag existed")
+	fencingConfigPath := flag.String("fencing-config", "", "JSON file that turns on fencing: before a recovery is requested the cell must confirm that the robots of the node are stopped or isolated, and nothing is requeued otherwise; needs -orchestrator-url; empty requests recoveries as before this flag existed")
 	checkConfig := flag.Bool("check-config", false, "load and validate the node registry given with -nodes, print a summary and exit (0 = valid)")
 	nodesFromPorts := flag.String("nodes-from-ports", "", "print a node registry built from the service registry of the ecosystem (contracts/ports.yaml of the SDK): every service with a health path, probed over HTTP; the services left out are listed on stderr; then exit")
 	flag.Parse()
@@ -125,6 +128,22 @@ func main() {
 			}
 			fmt.Printf("EVENTS_CONFIG=PASS mqtt %s, incident proposals %s\n", onOff(events.MQTT.Enabled), onOff(events.IncidentProposals.Enabled))
 		}
+		if *swarmConfigPath != "" {
+			swarmConfig, swarmErr := config.LoadSwarmConfig(*swarmConfigPath)
+			if swarmErr != nil {
+				fmt.Printf("SWARM_CONFIG=FAIL %v\n", swarmErr)
+				os.Exit(1)
+			}
+			fmt.Printf("SWARM_CONFIG=PASS dynamic registry %s\n", onOff(swarmConfig.Enabled))
+		}
+		if *fencingConfigPath != "" {
+			fencingConfig, fencingErr := watchdog.LoadFencingConfig(*fencingConfigPath)
+			if fencingErr != nil {
+				fmt.Printf("FENCING_CONFIG=FAIL %v\n", fencingErr)
+				os.Exit(1)
+			}
+			fmt.Printf("FENCING_CONFIG=PASS fencing %s\n", onOff(fencingConfig.Enabled))
+		}
 		return
 	}
 	if *orchestratorToken == "" {
@@ -173,6 +192,28 @@ func main() {
 	}
 	fmt.Printf("[node-healing] watching %d node(s) from %s\n", len(nodes), *registryPath)
 
+	var fencer watchdog.Fencer
+	if *fencingConfigPath != "" {
+		fencingConfig, fencingErr := watchdog.LoadFencingConfig(*fencingConfigPath)
+		if fencingErr != nil {
+			fmt.Fprintf(os.Stderr, "[node-healing] fatal: --fencing-config: %v\n", fencingErr)
+			os.Exit(1)
+		}
+		if fencingConfig.Enabled {
+			if *orchestratorURL == "" {
+				fmt.Fprintln(os.Stderr, "[node-healing] fatal: --fencing-config guards the recovery request, which needs --orchestrator-url")
+				os.Exit(1)
+			}
+			httpFencer, fencerErr := watchdog.NewHTTPFencer(fencingConfig)
+			if fencerErr != nil {
+				fmt.Fprintf(os.Stderr, "[node-healing] fatal: --fencing-config: %v\n", fencerErr)
+				os.Exit(1)
+			}
+			fencer = httpFencer
+			fmt.Printf("[node-healing] fencing on: a recovery is requested only after the robots of the node are confirmed safe (%s)\n", fencingConfig.Mode)
+		}
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -202,6 +243,7 @@ func main() {
 			go lease.Run(ctx)
 			fmt.Printf("[node-healing] lease %s as %s: a recovery is requested only while this watchdog holds it\n", lease.Name(), holder)
 		}
+		orchestratorReactor.Fencer = fencer
 		reactor = orchestratorReactor
 		fmt.Printf("[node-healing] recovery requests will be sent to orchestrator at %s only for registry entries with a \"dispatchNode\", after %s down, %s after start-up, at most %d per 10 minutes and one per node every %s\n",
 			*orchestratorURL, policy.ConfirmAfter, policy.StartupGrace, policy.BudgetMax, policy.Cooldown)
@@ -228,7 +270,43 @@ func main() {
 		}
 	}
 
-	wd := watchdog.NewWatchdog(nodes, wdReactor)
+	// The nodes announced in the state of SWARM-SYNC are added to the static registry (static entries win). A read that fails
+	// leaves the nodes as they are.
+	var swarm *config.SwarmRegistry
+	if *swarmConfigPath != "" {
+		swarmConfig, swarmErr := config.LoadSwarmConfig(*swarmConfigPath)
+		if swarmErr != nil {
+			fmt.Fprintf(os.Stderr, "[node-healing] fatal: --swarm-config: %v\n", swarmErr)
+			os.Exit(1)
+		}
+		if swarmConfig.Enabled {
+			var registryErr error
+			swarm, registryErr = config.NewSwarmRegistry(swarmConfig, printf)
+			if registryErr != nil {
+				fmt.Fprintf(os.Stderr, "[node-healing] fatal: --swarm-config: %v\n", registryErr)
+				os.Exit(1)
+			}
+			if fetchErr := swarm.Fetch(ctx); fetchErr != nil {
+				fmt.Fprintf(os.Stderr, "[node-healing] swarm registry: %v; watching the registry file until it can be read\n", fetchErr)
+			}
+			fmt.Printf("[node-healing] swarm registry on: nodes announced at %s are added to the registry file\n", swarmConfig.URL)
+		}
+	}
+	var staticMu sync.Mutex
+	staticNodes := nodes
+	currentNodes := func() []watchdog.Node {
+		staticMu.Lock()
+		defer staticMu.Unlock()
+		if swarm == nil {
+			return staticNodes
+		}
+		return swarm.Merge(staticNodes)
+	}
+
+	wd := watchdog.NewWatchdog(currentNodes(), wdReactor)
+	if swarm != nil {
+		go swarm.Run(ctx, func() { wd.SetNodes(currentNodes()) })
+	}
 
 	if *listen != "" {
 		status := &watchdog.StatusServer{Watchdog: wd, Version: Version, Started: time.Now(), Token: *statusToken}
@@ -237,6 +315,9 @@ func main() {
 		}
 		if eventReactor != nil {
 			status.Events = eventReactor
+		}
+		if counter, ok := reactor.(watchdog.FenceCounter); ok && fencer != nil {
+			status.Fences = counter
 		}
 		go func() {
 			if serveErr := status.Serve(ctx, *listen); serveErr != nil {
@@ -264,8 +345,12 @@ func main() {
 					}
 					continue
 				}
-				wd.SetNodes(fresh)
-				fmt.Printf("[node-healing] reloaded %s: watching %d node(s)\n", *registryPath, len(fresh))
+				staticMu.Lock()
+				staticNodes = fresh
+				staticMu.Unlock()
+				all := currentNodes()
+				wd.SetNodes(all)
+				fmt.Printf("[node-healing] reloaded %s: watching %d node(s)\n", *registryPath, len(all))
 				if journal != nil {
 					_ = journal.Record("reload", map[string]any{"registry": *registryPath, "nodes": len(fresh)})
 				}
