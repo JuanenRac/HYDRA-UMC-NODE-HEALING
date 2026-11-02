@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.2.4] - Fencing is mandatory by default before a recovery is requested, and the watchdog follows the typed Watch() stream of the orchestrator and the job dispatcher on loopback with documented registration and tests of the stream
+
 - **The `Watch()` stream uses the typed stubs:** the vendored gRPC stubs now declare `rpc Watch(Empty) returns (stream HealthReport)` (regenerated from the shared contract) and the watchdog follows the typed stream instead of a hand-made stream call.
 - **Documented: ORCHESTRATOR and JOB-DISPATCHER serve `Watch()` on loopback:** the integration contract says how to register them (`address` `127.0.0.1:50114` and `127.0.0.1:50090`, the name that has to match, `"watch": true`) and that the connection is loopback without credentials by decision; `nodes.example.json` lists both.
 - **Tests of the stream against a typed test server:** a node name that differs from the registered one is `INVALID`, and a stream that drops is followed by an immediate check and then reconnects when the node comes back.
