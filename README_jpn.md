@@ -18,14 +18,14 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Feature-Self--Healing-green.svg" alt="Feature">
   <img src="https://img.shields.io/badge/Platform-Distributed%20Edge-blue.svg" alt="Platform">
-  <img src="https://img.shields.io/badge/Tests-172%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-174%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.2.4-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
 
 ---
 
-**正直な現状確認 - 今日実際に動くもの:** ポーリング/分類ループ(`src/watchdog/watchdog.go`)、制限付きリトライポリシー(`src/watchdog/retry.go`)、HYDRA-UMC-ORCHESTRATOR への本物の復旧リクエスト配線(`src/watchdog/orchestrator_reactor.go`)、そして静的ノードレジストリのローダー(`src/config/config.go`)はすべて本物であり、テスト済みである(`src/config` と `src/watchdog` 全体で 172 件のテストが成功) - これらはモック化されたクライアントではなく、本物のループバックソケット上での本物の gRPC 往復通信である。既知かつ文書化されているギャップ: ノードレジストリは静的な JSON ファイル(`nodes.json`)であり、HYDRA-UMC-SWARM-SYNC へのライブクエリではない。なぜならそのプロジェクト自体にも、まだ問い合わせ可能な本物の API が存在しないからである - これは動的であるふりをしたプレースホルダーではなく、正直な v0 である。障害の発生したノードから実際に進行中のミッション作業をリルーティングすることも、このリポジトリの役割ではない - `OrchestratorReactor` を通じて復旧を要求するところで止まっており、その先の層(実際にジョブを移動させること)は別の場所にある。ロードマップの 4 つのフェーズ(デジタルツイン同期、Isaac Sim 物理統合、自動化された復旧パターン、AI 駆動の予測的自己修復)は、今のところ裏付けとなるコードが一切ない、将来に向けた願望である。これまでに何が実際に出荷されたかは `CHANGELOG.md` を参照。
+**正直な現状確認 - 今日実際に動くもの:** ポーリング/分類ループ(`src/watchdog/watchdog.go`)、制限付きリトライポリシー(`src/watchdog/retry.go`)、HYDRA-UMC-ORCHESTRATOR への本物の復旧リクエスト配線(`src/watchdog/orchestrator_reactor.go`)、そして静的ノードレジストリのローダー(`src/config/config.go`)はすべて本物であり、テスト済みである(`src/config` と `src/watchdog` 全体で 174 件のテストが成功) - これらはモック化されたクライアントではなく、本物のループバックソケット上での本物の gRPC 往復通信である。既知かつ文書化されているギャップ: ノードレジストリは静的な JSON ファイル(`nodes.json`)であり、HYDRA-UMC-SWARM-SYNC へのライブクエリではない。なぜならそのプロジェクト自体にも、まだ問い合わせ可能な本物の API が存在しないからである - これは動的であるふりをしたプレースホルダーではなく、正直な v0 である。障害の発生したノードから実際に進行中のミッション作業をリルーティングすることも、このリポジトリの役割ではない - `OrchestratorReactor` を通じて復旧を要求するところで止まっており、その先の層(実際にジョブを移動させること)は別の場所にある。ロードマップの 4 つのフェーズ(デジタルツイン同期、Isaac Sim 物理統合、自動化された復旧パターン、AI 駆動の予測的自己修復)は、今のところ裏付けとなるコードが一切ない、将来に向けた願望である。これまでに何が実際に出荷されたかは `CHANGELOG.md` を参照。
 
 ---
 
@@ -39,7 +39,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | バージョン | `0.2.4` |
 | 成熟度 | 機能する |
-| テスト | 172 (`go test ./...`) |
+| テスト | 174 (`go test ./...`) |
 | 技術 | Go / gRPC health checks / HTTP health probes |
 | 対象 | HYDRA-UMC セルの Raspberry Pi CM5 |
 | 実機での確認 | まだです：このバージョンについて実機での動作記録はありません |
@@ -55,7 +55,7 @@ GPL-3.0-or-later - see LICENSE
 | 領域 | 状態 | ここでの意味 |
 |---|---|---|
 | ソフトウェア | 🟡 | 主な目的では動作します。足りない点は上の正直さの確認に書かれています |
-| テスト | 🟢 | 自動テスト 172 件。変更のたびに実行されます |
+| テスト | 🟢 | 自動テスト 174 件。変更のたびに実行されます |
 | 実機 | 🔴 | まだです：このバージョンについて実機での動作記録はありません |
 | インターフェースとプロトコル | 🟡 | 提供するルートやメッセージは文書化され、クライアントで試験済みです。すべてのクライアントがまだ使ったわけではありません |
 | 連携 | 🟠 | メッセージとルートは SDK の共通契約に照らして検証されていますが、実機と一緒に動かしたことはありません |
@@ -138,7 +138,7 @@ go test ./...
 
 ## 🧪 テスト
 
-`go test ./...` で自動テスト 172 件を実行します。 件数は最上位の Go テストの数で、サブテストは加えていません。ハードウェアは不要です。
+`go test ./...` で自動テスト 174 件を実行します。 件数は最上位の Go テストの数で、サブテストは加えていません。ハードウェアは不要です。
 
 CI は `HYDRA_UMC_CI=1 python tools/ci_validate.py` を実行し、マニフェスト、文書、8 つの README、図を検査します。
 

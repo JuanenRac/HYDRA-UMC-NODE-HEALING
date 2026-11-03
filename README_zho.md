@@ -18,14 +18,14 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Feature-Self--Healing-green.svg" alt="Feature">
   <img src="https://img.shields.io/badge/Platform-Distributed%20Edge-blue.svg" alt="Platform">
-  <img src="https://img.shields.io/badge/Tests-172%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-174%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.2.4-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
 
 ---
 
-**诚实核查 - 今天真正能运行的部分：** 轮询/分类循环(`src/watchdog/watchdog.go`)、有限重试策略(`src/watchdog/retry.go`)、连接到 HYDRA-UMC-ORCHESTRATOR 的真实恢复请求线路(`src/watchdog/orchestrator_reactor.go`),以及静态节点注册表加载器(`src/config/config.go`)都是真实的并经过测试(`src/config` 和 `src/watchdog` 共 172 个测试通过)——而且这些都是真实回环套接字上的真实 gRPC 往返调用，而非模拟客户端。一个已知且已记录的差距：节点注册表是一个静态 JSON 文件(`nodes.json`),而不是对 HYDRA-UMC-SWARM-SYNC 的实时查询，因为那个项目本身也还没有可供查询的真实 API——这是诚实的 v0 版本，而不是假装动态的占位符。将真正在途的任务工作从故障节点重新分配出去，同样不是本仓库的职责——它只通过 `OrchestratorReactor` 请求恢复，到此为止；再往上的一层(真正搬运任务)存在于别处。路线图中的 4 个阶段(数字孪生同步、Isaac Sim 物理集成、自动化恢复模式、AI 驱动的预测性自愈)都是尚无任何代码支撑的愿景性未来工作。具体已交付的内容请见 `CHANGELOG.md`。
+**诚实核查 - 今天真正能运行的部分：** 轮询/分类循环(`src/watchdog/watchdog.go`)、有限重试策略(`src/watchdog/retry.go`)、连接到 HYDRA-UMC-ORCHESTRATOR 的真实恢复请求线路(`src/watchdog/orchestrator_reactor.go`),以及静态节点注册表加载器(`src/config/config.go`)都是真实的并经过测试(`src/config` 和 `src/watchdog` 共 174 个测试通过)——而且这些都是真实回环套接字上的真实 gRPC 往返调用，而非模拟客户端。一个已知且已记录的差距：节点注册表是一个静态 JSON 文件(`nodes.json`),而不是对 HYDRA-UMC-SWARM-SYNC 的实时查询，因为那个项目本身也还没有可供查询的真实 API——这是诚实的 v0 版本，而不是假装动态的占位符。将真正在途的任务工作从故障节点重新分配出去，同样不是本仓库的职责——它只通过 `OrchestratorReactor` 请求恢复，到此为止；再往上的一层(真正搬运任务)存在于别处。路线图中的 4 个阶段(数字孪生同步、Isaac Sim 物理集成、自动化恢复模式、AI 驱动的预测性自愈)都是尚无任何代码支撑的愿景性未来工作。具体已交付的内容请见 `CHANGELOG.md`。
 
 ---
 
@@ -39,7 +39,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | 版本 | `0.2.4` |
 | 成熟度 | 可用 |
-| 测试 | 172 (`go test ./...`) |
+| 测试 | 174 (`go test ./...`) |
 | 技术栈 | Go / gRPC health checks / HTTP health probes |
 | 目标 | HYDRA-UMC 工作单元的 Raspberry Pi CM5 |
 | 真实硬件 | 尚未：此版本没有在真实硬件上运行的记录 |
@@ -55,7 +55,7 @@ GPL-3.0-or-later - see LICENSE
 | 领域 | 状态 | 在这里的含义 |
 |---|---|---|
 | 软件 | 🟡 | 主要用途可用；上面的诚实性检查列出了仍然缺少的内容 |
-| 测试 | 🟢 | 172 项自动测试，每次变更都会运行 |
+| 测试 | 🟢 | 174 项自动测试，每次变更都会运行 |
 | 真实硬件 | 🔴 | 尚未：此版本没有在真实硬件上运行的记录 |
 | 接口与协议 | 🟡 | 提供的路由或消息已有文档，并用客户端测试过；尚未被所有客户端使用 |
 | 集成 | 🟠 | 其消息和路由已对照 SDK 的共享契约检查；尚未与真实设备一起运行 |
@@ -135,7 +135,7 @@ go test ./...
 
 ## 🧪 测试
 
-运行 `go test ./...` 会执行 172 个自动测试。 数字为顶层 Go 测试的数量，不含子测试。不需要硬件。
+运行 `go test ./...` 会执行 174 个自动测试。 数字为顶层 Go 测试的数量，不含子测试。不需要硬件。
 
 CI 运行 `HYDRA_UMC_CI=1 python tools/ci_validate.py`，检查清单、文档、八个 README 和图片。
 

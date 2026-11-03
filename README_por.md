@@ -18,14 +18,14 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Feature-Self--Healing-green.svg" alt="Feature">
   <img src="https://img.shields.io/badge/Platform-Distributed%20Edge-blue.svg" alt="Platform">
-  <img src="https://img.shields.io/badge/Tests-172%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-174%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.2.4-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
 
 ---
 
-**Verificação de honestidade - o que realmente funciona hoje:** o ciclo de sondagem/classificação (`src/watchdog/watchdog.go`), a política de repetição limitada (`src/watchdog/retry.go`), a ligação real do pedido de recuperação ao HYDRA-UMC-ORCHESTRATOR (`src/watchdog/orchestrator_reactor.go`) e o carregador estático do registo de nós (`src/config/config.go`) são todos reais e testados (172 testes a passar em `src/config` e `src/watchdog`) - e são idas e voltas gRPC reais sobre sockets loopback reais, não um cliente simulado. Uma lacuna conhecida e documentada: o registo de nós é um ficheiro JSON estático (`nodes.json`), não uma consulta em direto ao HYDRA-UMC-SWARM-SYNC, porque esse projeto também ainda não tem uma API real para consultar - esta é a v0 honesta, não um marcador de posição a fingir ser dinâmico. Redirecionar o trabalho de missão em curso para longe de um nó avariado também não é tarefa deste repositório - pede a recuperação através do `OrchestratorReactor` e fica por aí; a camada seguinte (mover de facto os trabalhos) vive noutro sítio. As 4 fases do roteiro (sincronização do gémeo digital, integração da física do Isaac Sim, padrões de recuperação automatizada, cura preditiva guiada por IA) são trabalho futuro aspiracional, ainda sem código por trás. Consulte o `CHANGELOG.md` para saber exatamente o que já foi entregue.
+**Verificação de honestidade - o que realmente funciona hoje:** o ciclo de sondagem/classificação (`src/watchdog/watchdog.go`), a política de repetição limitada (`src/watchdog/retry.go`), a ligação real do pedido de recuperação ao HYDRA-UMC-ORCHESTRATOR (`src/watchdog/orchestrator_reactor.go`) e o carregador estático do registo de nós (`src/config/config.go`) são todos reais e testados (174 testes a passar em `src/config` e `src/watchdog`) - e são idas e voltas gRPC reais sobre sockets loopback reais, não um cliente simulado. Uma lacuna conhecida e documentada: o registo de nós é um ficheiro JSON estático (`nodes.json`), não uma consulta em direto ao HYDRA-UMC-SWARM-SYNC, porque esse projeto também ainda não tem uma API real para consultar - esta é a v0 honesta, não um marcador de posição a fingir ser dinâmico. Redirecionar o trabalho de missão em curso para longe de um nó avariado também não é tarefa deste repositório - pede a recuperação através do `OrchestratorReactor` e fica por aí; a camada seguinte (mover de facto os trabalhos) vive noutro sítio. As 4 fases do roteiro (sincronização do gémeo digital, integração da física do Isaac Sim, padrões de recuperação automatizada, cura preditiva guiada por IA) são trabalho futuro aspiracional, ainda sem código por trás. Consulte o `CHANGELOG.md` para saber exatamente o que já foi entregue.
 
 ---
 
@@ -39,7 +39,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | Versão | `0.2.4` |
 | Maturidade | Funcional |
-| Testes | 172 (`go test ./...`) |
+| Testes | 174 (`go test ./...`) |
 | Tecnologia | Go / gRPC health checks / HTTP health probes |
 | Destino | O Raspberry Pi CM5 de uma célula HYDRA-UMC |
 | Em hardware real | Ainda não: não há registo de execução em hardware real para esta versão |
@@ -55,7 +55,7 @@ Cada linha é uma parte deste repositório e a luz diz até onde chega hoje. É 
 | Área | Estado | O que significa aqui |
 |---|---|---|
 | Software | 🟡 | Funciona para o seu propósito principal; a verificação de honestidade acima lista o que ainda falta |
-| Testes | 🟢 | 172 testes automáticos, executados a cada alteração |
+| Testes | 🟢 | 174 testes automáticos, executados a cada alteração |
 | Hardware real | 🔴 | Ainda não: não há registo de execução em hardware real para esta versão |
 | Interface e protocolos | 🟡 | As rotas ou mensagens que oferece estão documentadas e testadas com um cliente; ainda nem todos os clientes as usaram |
 | Integração | 🟠 | As suas mensagens e rotas são verificadas contra os contratos partilhados do SDK; ainda não funcionou em conjunto com o equipamento real |
@@ -133,7 +133,7 @@ go test ./...
 
 ## 🧪 Testes
 
-172 testes automáticos correm com `go test ./...`. Cada número é um teste Go de nível superior; os subtestes não são somados. Não precisam de hardware.
+174 testes automáticos correm com `go test ./...`. Cada número é um teste Go de nível superior; os subtestes não são somados. Não precisam de hardware.
 
 A CI executa `HYDRA_UMC_CI=1 python tools/ci_validate.py`, que verifica o manifesto, os documentos, os oito README e as imagens.
 

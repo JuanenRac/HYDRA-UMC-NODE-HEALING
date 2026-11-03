@@ -18,14 +18,14 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Feature-Self--Healing-green.svg" alt="Feature">
   <img src="https://img.shields.io/badge/Platform-Distributed%20Edge-blue.svg" alt="Platform">
-  <img src="https://img.shields.io/badge/Tests-172%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-174%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.2.4-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
 
 ---
 
-**Ehrlichkeitscheck - was heute wirklich läuft:** die Polling-/Klassifizierungsschleife (`src/watchdog/watchdog.go`), die begrenzte Retry-Richtlinie (`src/watchdog/retry.go`), die echte Verdrahtung der Wiederherstellungsanfrage an HYDRA-UMC-ORCHESTRATOR (`src/watchdog/orchestrator_reactor.go`) und der statische Node-Registry-Loader (`src/config/config.go`) sind alle real und getestet (172 bestandene Tests über `src/config` und `src/watchdog`) - und das sind echte gRPC-Roundtrips über echte Loopback-Sockets, kein simulierter Client. Was eine bekannte, dokumentierte Lücke ist: die Node-Registry ist eine statische JSON-Datei (`nodes.json`), keine Live-Abfrage an HYDRA-UMC-SWARM-SYNC, weil auch dieses Projekt noch keine echte API dafür hat - das ist die ehrliche v0, kein Platzhalter, der Dynamik vortäuscht. Auch das Umleiten der tatsächlich laufenden Missionsarbeit weg von einem ausgefallenen Knoten ist nicht die Aufgabe dieses Repositories - es fordert Wiederherstellung über `OrchestratorReactor` an und hört dort auf; die nächste Schicht (Jobs tatsächlich verschieben) liegt anderswo. Die 4 Roadmap-Phasen (Digital-Twin-Synchronisation, Isaac-Sim-Physikintegration, automatisierte Wiederherstellungsmuster, KI-gestützte prädiktive Heilung) sind angestrebte Zukunftsarbeit ohne jeglichen Code dahinter bisher. Siehe `CHANGELOG.md` für das, was bisher genau ausgeliefert wurde.
+**Ehrlichkeitscheck - was heute wirklich läuft:** die Polling-/Klassifizierungsschleife (`src/watchdog/watchdog.go`), die begrenzte Retry-Richtlinie (`src/watchdog/retry.go`), die echte Verdrahtung der Wiederherstellungsanfrage an HYDRA-UMC-ORCHESTRATOR (`src/watchdog/orchestrator_reactor.go`) und der statische Node-Registry-Loader (`src/config/config.go`) sind alle real und getestet (174 bestandene Tests über `src/config` und `src/watchdog`) - und das sind echte gRPC-Roundtrips über echte Loopback-Sockets, kein simulierter Client. Was eine bekannte, dokumentierte Lücke ist: die Node-Registry ist eine statische JSON-Datei (`nodes.json`), keine Live-Abfrage an HYDRA-UMC-SWARM-SYNC, weil auch dieses Projekt noch keine echte API dafür hat - das ist die ehrliche v0, kein Platzhalter, der Dynamik vortäuscht. Auch das Umleiten der tatsächlich laufenden Missionsarbeit weg von einem ausgefallenen Knoten ist nicht die Aufgabe dieses Repositories - es fordert Wiederherstellung über `OrchestratorReactor` an und hört dort auf; die nächste Schicht (Jobs tatsächlich verschieben) liegt anderswo. Die 4 Roadmap-Phasen (Digital-Twin-Synchronisation, Isaac-Sim-Physikintegration, automatisierte Wiederherstellungsmuster, KI-gestützte prädiktive Heilung) sind angestrebte Zukunftsarbeit ohne jeglichen Code dahinter bisher. Siehe `CHANGELOG.md` für das, was bisher genau ausgeliefert wurde.
 
 ---
 
@@ -39,7 +39,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | Version | `0.2.4` |
 | Reifegrad | Funktionsfähig |
-| Tests | 172 (`go test ./...`) |
+| Tests | 174 (`go test ./...`) |
 | Technik | Go / gRPC health checks / HTTP health probes |
 | Ziel | Der Raspberry Pi CM5 einer HYDRA-UMC-Zelle |
 | Auf echter Hardware | Noch nicht: für diese Version ist kein Lauf auf echter Hardware vermerkt |
@@ -55,7 +55,7 @@ Jede Zeile ist ein Teil dieses Repositorys, und die Ampel sagt, wie weit er heut
 | Bereich | Stand | Was das hier bedeutet |
 |---|---|---|
 | Software | 🟡 | Funktioniert für seinen Hauptzweck; die Ehrlichkeitsprüfung oben nennt, was noch fehlt |
-| Tests | 🟢 | 172 automatische Tests, bei jeder Änderung ausgeführt |
+| Tests | 🟢 | 174 automatische Tests, bei jeder Änderung ausgeführt |
 | Echte Hardware | 🔴 | Noch nicht: für diese Version ist kein Lauf auf echter Hardware vermerkt |
 | Schnittstelle und Protokolle | 🟡 | Die angebotenen Routen oder Nachrichten sind dokumentiert und mit einem Client getestet; noch nicht jeder Client hat sie benutzt |
 | Integration | 🟠 | Seine Nachrichten und Routen werden gegen die gemeinsamen Verträge des SDK geprüft; es lief noch nicht zusammen mit der echten Ausrüstung |
@@ -133,7 +133,7 @@ go test ./...
 
 ## 🧪 Tests
 
-172 automatische Tests laufen mit `go test ./...`. Jede Zahl ist ein Go-Test der obersten Ebene; Untertests werden nicht addiert. Sie brauchen keine Hardware.
+174 automatische Tests laufen mit `go test ./...`. Jede Zahl ist ein Go-Test der obersten Ebene; Untertests werden nicht addiert. Sie brauchen keine Hardware.
 
 Die CI führt `HYDRA_UMC_CI=1 python tools/ci_validate.py` aus; das prüft das Manifest, die Dokumente, die acht READMEs und die Bilder.
 

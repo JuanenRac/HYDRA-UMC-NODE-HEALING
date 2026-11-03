@@ -18,14 +18,14 @@ GPL-3.0-or-later - see LICENSE
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Feature-Self--Healing-green.svg" alt="Feature">
   <img src="https://img.shields.io/badge/Platform-Distributed%20Edge-blue.svg" alt="Platform">
-  <img src="https://img.shields.io/badge/Tests-172%20passing-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-174%20passing-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.2.4-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-functional-0F6CBD.svg" alt="Maturity">
 </p>
 
 ---
 
-**Vérification d'honnêteté - ce qui fonctionne réellement aujourd'hui :** la boucle de sondage/classification (`src/watchdog/watchdog.go`), la politique de nouvelle tentative bornée (`src/watchdog/retry.go`), le vrai câblage de demande de récupération vers HYDRA-UMC-ORCHESTRATOR (`src/watchdog/orchestrator_reactor.go`), et le chargeur statique du registre de nœuds (`src/config/config.go`) sont tous réels et testés (172 tests passants entre `src/config` et `src/watchdog`) - et ce sont de vrais allers-retours gRPC sur de vrais sockets loopback, pas un client simulé. Ce qui est une lacune connue et documentée : le registre de nœuds est un fichier JSON statique (`nodes.json`), pas une requête en direct vers HYDRA-UMC-SWARM-SYNC, car ce projet n'a lui non plus encore de vraie API à interroger - c'est la v0 honnête, pas un placeholder qui prétend être dynamique. Rediriger le travail de mission réellement en cours loin d'un nœud défaillant n'est pas non plus le rôle de ce dépôt - il demande une récupération via `OrchestratorReactor` et s'arrête là ; la couche suivante (déplacer réellement les tâches) vit ailleurs. Les 4 phases de la feuille de route (synchronisation de jumeau numérique, intégration physique Isaac Sim, patrons de récupération automatisée, guérison prédictive pilotée par IA) sont du travail futur aspirationnel sans aucun code derrière pour l'instant. Voir `CHANGELOG.md` pour ce qui a été livré exactement jusqu'à présent.
+**Vérification d'honnêteté - ce qui fonctionne réellement aujourd'hui :** la boucle de sondage/classification (`src/watchdog/watchdog.go`), la politique de nouvelle tentative bornée (`src/watchdog/retry.go`), le vrai câblage de demande de récupération vers HYDRA-UMC-ORCHESTRATOR (`src/watchdog/orchestrator_reactor.go`), et le chargeur statique du registre de nœuds (`src/config/config.go`) sont tous réels et testés (174 tests passants entre `src/config` et `src/watchdog`) - et ce sont de vrais allers-retours gRPC sur de vrais sockets loopback, pas un client simulé. Ce qui est une lacune connue et documentée : le registre de nœuds est un fichier JSON statique (`nodes.json`), pas une requête en direct vers HYDRA-UMC-SWARM-SYNC, car ce projet n'a lui non plus encore de vraie API à interroger - c'est la v0 honnête, pas un placeholder qui prétend être dynamique. Rediriger le travail de mission réellement en cours loin d'un nœud défaillant n'est pas non plus le rôle de ce dépôt - il demande une récupération via `OrchestratorReactor` et s'arrête là ; la couche suivante (déplacer réellement les tâches) vit ailleurs. Les 4 phases de la feuille de route (synchronisation de jumeau numérique, intégration physique Isaac Sim, patrons de récupération automatisée, guérison prédictive pilotée par IA) sont du travail futur aspirationnel sans aucun code derrière pour l'instant. Voir `CHANGELOG.md` pour ce qui a été livré exactement jusqu'à présent.
 
 ---
 
@@ -39,7 +39,7 @@ GPL-3.0-or-later - see LICENSE
 |---|---|
 | Version | `0.2.4` |
 | Maturité | Fonctionnel |
-| Tests | 172 (`go test ./...`) |
+| Tests | 174 (`go test ./...`) |
 | Technologie | Go / gRPC health checks / HTTP health probes |
 | Cible | Le Raspberry Pi CM5 d'une cellule HYDRA-UMC |
 | Sur matériel réel | Pas encore : aucune exécution sur du matériel réel n'est consignée pour cette version |
@@ -55,7 +55,7 @@ Chaque ligne est une partie de ce dépôt et le feu dit où elle en est aujourd'
 | Domaine | État | Ce que cela veut dire ici |
 |---|---|---|
 | Logiciel | 🟡 | Fonctionne pour son usage principal ; la vérification d'honnêteté ci-dessus liste ce qui manque encore |
-| Tests | 🟢 | 172 tests automatiques, exécutés à chaque modification |
+| Tests | 🟢 | 174 tests automatiques, exécutés à chaque modification |
 | Matériel réel | 🔴 | Pas encore : aucune exécution sur du matériel réel n'est consignée pour cette version |
 | Interface et protocoles | 🟡 | Les routes ou les messages proposés sont documentés et testés avec un client ; tous les clients ne les ont pas encore utilisés |
 | Intégration | 🟠 | Ses messages et ses routes sont vérifiés par rapport aux contrats partagés du SDK ; il n'a pas fonctionné avec l'équipement réel |
@@ -133,7 +133,7 @@ go test ./...
 
 ## 🧪 Tests
 
-172 tests automatiques s'exécutent avec `go test ./...`. Chaque nombre est un test Go de premier niveau ; les sous-tests ne sont pas ajoutés. Ils n'exigent aucun matériel.
+174 tests automatiques s'exécutent avec `go test ./...`. Chaque nombre est un test Go de premier niveau ; les sous-tests ne sont pas ajoutés. Ils n'exigent aucun matériel.
 
 La CI exécute `HYDRA_UMC_CI=1 python tools/ci_validate.py`, qui vérifie le manifeste, les documents, les huit README et les images.
 
