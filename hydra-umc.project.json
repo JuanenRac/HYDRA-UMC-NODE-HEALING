@@ -20,5 +20,8 @@
   "native_version": {
     "file": "version.go",
     "pattern": "Version\\s*=\\s*\"(\\d+)\\.(\\d+)\\.(\\d+)\""
-  }
+  },
+  "depends_on": [
+    "HYDRA-UMC-ORCHESTRATOR"
+  ]
 }
