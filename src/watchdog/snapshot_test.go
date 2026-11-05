@@ -164,8 +164,8 @@ func TestParseMissionState(t *testing.T) {
 	}
 }
 
-// fakeBroker answers CONNECT with CONNACK, SUBSCRIBE with SUBACK and then sends one retained PUBLISH (or none).
-func fakeBroker(t *testing.T, topic string, payload []byte) string {
+// retainedBroker answers CONNECT with CONNACK, SUBSCRIBE with SUBACK and then sends one retained PUBLISH (or none).
+func retainedBroker(t *testing.T, topic string, payload []byte) string {
 	t.Helper()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -198,13 +198,13 @@ func fakeBroker(t *testing.T, topic string, payload []byte) string {
 }
 
 func TestMQTTTarget_ReadRetainedTakesTheRetainedMessage(t *testing.T) {
-	addr := fakeBroker(t, MissionStateTopic, []byte(`{"schema":"job-dispatch-state/1"}`))
+	addr := retainedBroker(t, MissionStateTopic, []byte(`{"schema":"job-dispatch-state/1"}`))
 	target := MQTTTarget{Broker: addr, ClientID: "t", Timeout: 2 * time.Second}
 	raw, err := target.ReadRetained(context.Background(), MissionStateTopic)
 	if err != nil || string(raw) != `{"schema":"job-dispatch-state/1"}` {
 		t.Fatalf("%q %v", raw, err)
 	}
-	source := RetainedMissionSource{Target: MQTTTarget{Broker: fakeBroker(t, MissionStateTopic, []byte(`{"schema":"job-dispatch-state/1","by_robot":{"r":["j"]}}`)), ClientID: "t", Timeout: 2 * time.Second}}
+	source := RetainedMissionSource{Target: MQTTTarget{Broker: retainedBroker(t, MissionStateTopic, []byte(`{"schema":"job-dispatch-state/1","by_robot":{"r":["j"]}}`)), ClientID: "t", Timeout: 2 * time.Second}}
 	state, err := source.MissionState(context.Background())
 	if err != nil || len(state.Held("r")) != 1 {
 		t.Fatalf("%+v %v", state, err)
@@ -212,7 +212,7 @@ func TestMQTTTarget_ReadRetainedTakesTheRetainedMessage(t *testing.T) {
 }
 
 func TestMQTTTarget_ReadRetainedWithNothingRetainedIsAnErrorNotAnEmptyState(t *testing.T) {
-	addr := fakeBroker(t, MissionStateTopic, nil)
+	addr := retainedBroker(t, MissionStateTopic, nil)
 	target := MQTTTarget{Broker: addr, ClientID: "t", Timeout: 700 * time.Millisecond}
 	if raw, err := target.ReadRetained(context.Background(), MissionStateTopic); err == nil {
 		t.Fatalf("nothing retained must be an error, got %q", raw)
