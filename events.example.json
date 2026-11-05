@@ -16,5 +16,9 @@
     "enabled": false,
     "sustainedSeconds": 60,
     "includeDegraded": false
+  },
+  "missionState": {
+    "enabled": false,
+    "topic": "hydra/jobs/state"
   }
 }

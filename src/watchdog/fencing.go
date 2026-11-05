@@ -262,7 +262,7 @@ func (f *HTTPFencer) Fence(ctx context.Context, node Node, target string, failin
 	}
 
 	if f.Config.HoldURL != "" {
-		payload, _ := json.Marshal(map[string]string{"node": target, "reason": "node-healing recovery"})
+		payload, _ := json.Marshal(map[string]string{"node": target, "robot": target, "reason": "node-healing recovery"})
 		resp, err := f.request(ctx, http.MethodPost, expand(f.Config.HoldURL, target), payload)
 		if err != nil {
 			return FenceResult{false, "the cell could not be asked to hold the robot: " + redactError(err)}

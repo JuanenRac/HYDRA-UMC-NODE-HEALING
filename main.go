@@ -51,6 +51,8 @@ func main() {
 	startupGrace := flag.Duration("startup-grace", policy.StartupGrace, "no recovery is requested sooner than this after the watchdog starts")
 	cooldown := flag.Duration("recover-cooldown", policy.Cooldown, "minimum time between two recovery requests for the same node")
 	budget := flag.Int("recover-budget", policy.BudgetMax, "most recovery requests per 10 minutes across all nodes; past it the watchdog only logs (0 = unlimited)")
+	snapshotPath := flag.String("snapshot-file", "", "append-only file of the versioned snapshots of the health of each node (healing-snapshot/1), one JSON object per line chained by SHA-256; written at every change of state; empty writes none")
+	snapshotVerify := flag.String("snapshot-verify", "", "check a snapshot file (valid documents, chain of hashes, growing sequence), print SNAPSHOT_CHAIN=PASS or FAIL and exit")
 	journalPath := flag.String("journal", "", "append-only JSONL journal of every transition and recovery request, chained by SHA-256 and rotated by size; empty keeps no journal")
 	journalMaxBytes := flag.Int64("journal-max-bytes", watchdog.DefaultJournalMaxBytes, "size at which the journal is rotated")
 	journalBackups := flag.Int("journal-backups", watchdog.DefaultJournalBackups, "how many rotated journal files are kept")
@@ -78,6 +80,15 @@ func main() {
 		if len(skipped) > 0 {
 			fmt.Fprintf(os.Stderr, "[node-healing] left out (no port or no health path in the registry): %s\n", strings.Join(skipped, ", "))
 		}
+		return
+	}
+	if *snapshotVerify != "" {
+		count, verifyErr := watchdog.VerifySnapshots(*snapshotVerify)
+		if verifyErr != nil {
+			fmt.Printf("SNAPSHOT_CHAIN=FAIL %v\n", verifyErr)
+			os.Exit(1)
+		}
+		fmt.Printf("SNAPSHOT_CHAIN=PASS snapshots=%d\n", count)
 		return
 	}
 	var journal *watchdog.Journal
@@ -267,6 +278,7 @@ func main() {
 
 	var wdReactor watchdog.Reactor = reactor
 	var eventReactor *watchdog.EventReactor
+	var missionSource watchdog.MissionSource
 	if *eventsConfigPath != "" {
 		events, eventsErr := watchdog.LoadEventsConfig(*eventsConfigPath)
 		if eventsErr != nil {
@@ -282,8 +294,23 @@ func main() {
 			eventReactor = watchdog.NewEventReactor(events, target, printf)
 			go eventReactor.Run(ctx)
 			wdReactor = watchdog.MultiReactor{reactor, eventReactor}
+			if events.MissionState.Enabled {
+				missionSource = watchdog.RetainedMissionSource{Target: target, Topic: events.MissionState.Topic}
+				fmt.Printf("[node-healing] the state of the missions is read (read only) from %s on %s\n", missionTopic(events.MissionState.Topic), events.MQTT.Broker)
+			}
 			fmt.Printf("[node-healing] events: every transition goes to %s/<node>/state on %s; incident proposals %s\n", events.MQTT.TopicPrefix, events.MQTT.Broker, onOff(events.IncidentProposals.Enabled))
 		}
+	}
+
+	if *snapshotPath != "" {
+		chain, chainErr := watchdog.NewSnapshotChain(*snapshotPath)
+		if chainErr != nil {
+			fmt.Fprintf(os.Stderr, "[node-healing] fatal: --snapshot-file: %v\n", chainErr)
+			os.Exit(1)
+		}
+		snapshots := &watchdog.SnapshotReactor{Chain: chain, Version: Version, ConfigHash: watchdog.HashFile(*registryPath), Missions: missionSource, Context: ctx, Printf: printf}
+		wdReactor = watchdog.MultiReactor{wdReactor, snapshots}
+		fmt.Printf("[node-healing] snapshots: every change of state is written to %s (healing-snapshot/1, chained by SHA-256)\n", *snapshotPath)
 	}
 
 	// The nodes announced in the state of SWARM-SYNC are added to the static registry (static entries win). A read that fails
@@ -381,6 +408,13 @@ func main() {
 		_ = journal.Record("stop", nil)
 	}
 	fmt.Println("[node-healing] shutting down")
+}
+
+func missionTopic(topic string) string {
+	if topic == "" {
+		return watchdog.MissionStateTopic
+	}
+	return topic
 }
 
 func onOff(on bool) string {

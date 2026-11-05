@@ -44,6 +44,15 @@ const EventTransition = "node.health.transition"
 type EventsConfig struct {
 	MQTT              MQTTSection      `json:"mqtt"`
 	IncidentProposals ProposalsSection `json:"incidentProposals"`
+	// MissionState turns on the READING of the state of the mission queue that JOB-DISPATCHER keeps retained on the same broker.
+	MissionState MissionStateSection `json:"missionState"`
+}
+
+// MissionStateSection says whether the watchdog reads the state of the missions (see missionstate.go). Read only, off by default.
+type MissionStateSection struct {
+	Enabled bool `json:"enabled"`
+	// Topic defaults to hydra/jobs/state.
+	Topic string `json:"topic"`
 }
 
 // MQTTSection says where the events go.
