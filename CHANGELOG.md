@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.2.5] - A versioned snapshot of the health of each node, in a chain of hashes (--snapshot-file, off by default): every change of state writes one healing-snapshot/1 document (identity, growing sequence, component versions, hash of the... (and 2 more changes)
+
 - **A versioned snapshot of the health of each node, in a chain of hashes (`--snapshot-file`, off by default):** every change of state writes one `healing-snapshot/1` document (identity, growing sequence, component versions, hash of the registry, health, last actions, and the jobs the node holds) to an append-only file where each line carries the hash of the one before; `--snapshot-verify` checks a file. The document has no date. A document without identity, sequence, versions or health is refused.
 
 - **The state of the mission queue is read, read only:** with `missionState` in the events file the watchdog reads the retained `job-dispatch-state/1` of JOB-DISPATCHER from the broker and names in the snapshot the jobs a node holds. A state that cannot be read is left out, never taken for "nothing held". The hold request of the fencing now carries `robot` next to `node`, which is what the hold route of the safety zones takes.
