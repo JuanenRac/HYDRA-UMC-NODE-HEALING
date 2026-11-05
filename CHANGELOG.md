@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The build test of the repository compiles only on CI or when allowed:** for the stacks that compile (`rust`, `go`, `android`, `flutter`, `firmware-c`), `tools/build_test.py` prints `BUILD_TEST=SKIPPED` with exit status 2 on a plain PC, never a pass; `ALLOW_LOCAL_BUILD=1` allows it and a CI runner always may. The `python` and `node` stacks are not locked.
+
 ## [0.2.4] - Fencing is mandatory by default before a recovery is requested, and the watchdog follows the typed Watch() stream of the orchestrator and the job dispatcher on loopback with documented registration and tests of the stream
 
 - **The `Watch()` stream uses the typed stubs:** the vendored gRPC stubs now declare `rpc Watch(Empty) returns (stream HealthReport)` (regenerated from the shared contract) and the watchdog follows the typed stream instead of a hand-made stream call.
