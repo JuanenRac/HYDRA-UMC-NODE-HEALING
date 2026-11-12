@@ -84,6 +84,8 @@ Si un nodo falla debido a un mal funcionamiento del hardware o una caída de la 
 
 **HYDRA-UMC-NODE-HEALING** es el vigilante de salud de la flota: sondea cada nodo por HTTP o gRPC, lo clasifica y pide a `HYDRA-UMC-ORCHESTRATOR` que recupere sus misiones cuando un nodo desaparece. Vigila e informa; no reinicia hardware.
 
+> **Plataforma:** donde este README dice CM5, se refiere al banco piloto que funciona hoy; la plataforma objetivo de HYDRA-UMC es una NVIDIA Jetson Orin NX de 16 GB, un diseño que no se ha construido ni probado.
+
 ## 🏛️ Arquitectura
 
 <p align="center">

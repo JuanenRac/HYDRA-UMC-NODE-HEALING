@@ -84,6 +84,8 @@ Si un nœud échoue en raison d'un dysfonctionnement matériel ou d'une panne de
 
 **HYDRA-UMC-NODE-HEALING** est le chien de garde de santé de la flotte : il interroge chaque nœud en HTTP ou gRPC, le classe et demande à `HYDRA-UMC-ORCHESTRATOR` de récupérer ses missions quand un nœud disparaît. Il surveille et signale ; il ne redémarre pas de matériel.
 
+> **Plateforme :** là où ce README dit CM5, il s'agit du banc pilote qui fonctionne aujourd'hui ; la plateforme visée par HYDRA-UMC est un NVIDIA Jetson Orin NX 16 Go, une conception ni construite ni testée.
+
 ## 🏛️ Architecture
 
 <p align="center">

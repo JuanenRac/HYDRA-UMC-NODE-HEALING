@@ -89,6 +89,8 @@ GPL-3.0-or-later - see LICENSE
 
 **HYDRA-UMC-NODE-HEALING** はフリートの健全性ウォッチドッグです。各ノードを HTTP または gRPC で定期的に確認して状態を分類し、ノードが消えたときはそのミッションの回復を `HYDRA-UMC-ORCHESTRATOR` に依頼します。監視と報告だけを行い、ハードウェアを再起動することはありません。
 
+> **プラットフォーム：** この README の「CM5」は、現在動作している試験用ベンチを指します。HYDRA-UMC の目標プラットフォームは NVIDIA Jetson Orin NX 16 GB ですが、これは製作も試験もされていない設計です。
+
 ## 🏛️ アーキテクチャ
 
 <p align="center">

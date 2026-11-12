@@ -84,6 +84,8 @@ Se um nó falhar por avaria de hardware ou falha de rede, o Healing Manager acio
 
 O **HYDRA-UMC-NODE-HEALING** é o vigilante de saúde da frota: consulta cada nó por HTTP ou gRPC, classifica-o e pede ao `HYDRA-UMC-ORCHESTRATOR` que recupere as suas missões quando um nó desaparece. Vigia e comunica; não reinicia hardware.
 
+> **Plataforma:** onde este README diz CM5, refere-se ao banco piloto que funciona hoje; a plataforma objetivo do HYDRA-UMC é uma NVIDIA Jetson Orin NX de 16 GB, um desenho que não foi construído nem testado.
+
 ## 🏛️ Arquitetura
 
 <p align="center">

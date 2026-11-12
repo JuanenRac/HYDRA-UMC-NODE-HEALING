@@ -84,6 +84,8 @@ If a node fails due to hardware malfunction or network outage, the Healing Manag
 
 **HYDRA-UMC-NODE-HEALING** is the health watchdog of the fleet: it polls every node over HTTP or gRPC, classifies it and asks `HYDRA-UMC-ORCHESTRATOR` to recover its missions when a node is gone. It watches and reports; it does not restart hardware.
 
+> **Platform:** where this README says CM5, it means the pilot bench that runs today; the target platform of HYDRA-UMC is an NVIDIA Jetson Orin NX 16 GB, a design that has not been built or tested.
+
 ## 🏛️ Architecture
 
 <p align="center">

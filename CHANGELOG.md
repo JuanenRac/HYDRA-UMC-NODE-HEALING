@@ -4,7 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
-## [0.2.5] - A versioned snapshot of the health of each node, in a chain of hashes (--snapshot-file, off by default): every change of state writes one healing-snapshot/1 document (identity, growing sequence, component versions, hash of the... (and 2 more changes)
+## [0.2.5] - **README: the platform statement:** a note says that where the README speaks of the CM5 it means the pilot bench that runs today, and that the target platform of HYDRA-UMC, an NVIDIA Jetson Orin NX 16 GB, is a design that has not been built or tested.
+- A versioned snapshot of the health of each node, in a chain of hashes (--snapshot-file, off by default): every change of state writes one healing-snapshot/1 document (identity, growing sequence, component versions, hash of the... (and 2 more changes)
 
 - **A versioned snapshot of the health of each node, in a chain of hashes (`--snapshot-file`, off by default):** every change of state writes one `healing-snapshot/1` document (identity, growing sequence, component versions, hash of the registry, health, last actions, and the jobs the node holds) to an append-only file where each line carries the hash of the one before; `--snapshot-verify` checks a file. The document has no date. A document without identity, sequence, versions or health is refused.
 

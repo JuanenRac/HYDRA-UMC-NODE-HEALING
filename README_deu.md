@@ -84,6 +84,8 @@ Wenn ein Knoten aufgrund einer Hardware-Fehlfunktion oder eines Netzwerkausfalls
 
 **HYDRA-UMC-NODE-HEALING** ist der Gesundheitswächter der Flotte: Er fragt jeden Knoten per HTTP oder gRPC ab, stuft ihn ein und bittet `HYDRA-UMC-ORCHESTRATOR`, seine Missionen zu übernehmen, wenn ein Knoten ausfällt. Er überwacht und meldet; er startet keine Hardware neu.
 
+> **Plattform:** Wo dieses README CM5 sagt, ist der Pilotprüfstand gemeint, der heute läuft; die Zielplattform von HYDRA-UMC ist ein NVIDIA Jetson Orin NX 16 GB, ein Entwurf, der weder gebaut noch getestet wurde.
+
 ## 🏛️ Architektur
 
 <p align="center">

@@ -86,6 +86,8 @@ GPL-3.0-or-later - see LICENSE
 
 **HYDRA-UMC-NODE-HEALING** 是机群的健康看门狗：它通过 HTTP 或 gRPC 轮询每个节点并进行分类，节点消失时请求 `HYDRA-UMC-ORCHESTRATOR` 接管其任务。它只监视和报告，不会重启硬件。
 
+> **平台：** 本 README 中的 CM5 指的是目前正在运行的试验台；HYDRA-UMC 的目标平台是 NVIDIA Jetson Orin NX 16 GB，这是尚未制造或测试的设计。
+
 ## 🏛️ 架构
 
 <p align="center">
