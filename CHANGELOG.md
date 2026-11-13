@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **More tests for the MQTT clients, the redaction forms, the swarm refresh loop and the event target, a simulated fleet and a coverage floor:** 40 new tests send the hand-written MQTT packets and both clients through a scripted broker that refuses, hangs up, goes silent, answers with something else and sends what is not the reader's own; they cover the JSON and line forms of the redaction, the refresh loop of the swarm registry against a SWARM-SYNC that changes, fails and recovers, and the credential files of the event target. A `Simulation bench` workflow runs the real watchdog and reactor against simulated services (steady, stuck, bouncing, dead, lying) and a simulated orchestrator with the race detector on, and a `Coverage` workflow fails when the statement coverage falls under its floor.
+
 ## [0.2.5] - **README: the platform statement:** a note says that where the README speaks of the CM5 it means the pilot bench that runs today, and that the target platform of HYDRA-UMC, an NVIDIA Jetson Orin NX 16 GB, is a design that has not been built or tested.
 - A versioned snapshot of the health of each node, in a chain of hashes (--snapshot-file, off by default): every change of state writes one healing-snapshot/1 document (identity, growing sequence, component versions, hash of the... (and 2 more changes)
 
