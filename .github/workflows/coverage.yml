@@ -1,0 +1,55 @@
+# =============================================================================
+# HYDRA-UMC-NODE-HEALING - Coverage
+# Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
+# GPL-3.0-or-later - see LICENSE
+#
+# Measures the statement coverage of the Go packages and fails when the total falls under the floor.
+# The floor only goes up: raise COVERAGE_FLOOR when the measured value rises.
+# =============================================================================
+name: Coverage
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  COVERAGE_FLOOR: "75.0"
+
+jobs:
+  coverage:
+    name: Go coverage with a floor
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: stable
+      - name: Run the tests with coverage
+        shell: bash
+        run: go test -count=1 -covermode=atomic -coverprofile=cover.out ./...
+      - name: Report the coverage and enforce the floor
+        shell: bash
+        run: |
+          go tool cover -func=cover.out > cover.txt
+          total="$(awk '/^total:/ {gsub("%","",$3); print $3}' cover.txt)"
+          {
+            echo "### Go coverage"
+            echo
+            echo "Total: ${total}% (floor ${COVERAGE_FLOOR}%)"
+            echo
+            echo '```'
+            sort -k3 -n cover.txt | head -40
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          grep -v '100.0%' cover.txt
+          echo "COVERAGE_TOTAL=${total}"
+          awk -v t="$total" -v f="$COVERAGE_FLOOR" 'BEGIN { exit !(t+0 >= f+0) }' || { echo "::error::coverage ${total}% is under the floor ${COVERAGE_FLOOR}%"; exit 1; }
