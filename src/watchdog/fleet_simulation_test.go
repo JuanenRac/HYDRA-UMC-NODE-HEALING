@@ -173,6 +173,11 @@ func TestFleet_AStuckNodeIsRecoveredOnceAndABouncingOneNever(t *testing.T) {
 	}, reactor)
 	fleetWaitUntil(t, 5*time.Second, "the stuck node to be recovered", func() bool { return orchestrator.count("cell-1") == 1 })
 	time.Sleep(600 * time.Millisecond) // long enough for a second request to show up if the safeguards were missing
+	// The states are read while the watchdog still runs: stopping cancels a poll that is in flight, and that one reads as unreachable.
+	fleetWaitUntil(t, 5*time.Second, "the healthy node to read healthy and the stuck one unhealthy", func() bool {
+		return stateOf(wd, "fine") == StatusHealthy && stateOf(wd, "stuck") == StatusUnhealthy
+	})
+	finalFine, finalStuck := stateOf(wd, "fine"), stateOf(wd, "stuck")
 	stop()
 	if got := orchestrator.count("cell-1"); got != 1 {
 		t.Errorf("the stuck node was recovered %d times, want exactly 1", got)
@@ -183,11 +188,11 @@ func TestFleet_AStuckNodeIsRecoveredOnceAndABouncingOneNever(t *testing.T) {
 	if got := orchestrator.count("cell-3"); got != 0 {
 		t.Errorf("a healthy node was recovered %d times", got)
 	}
-	if got := stateOf(wd, "fine"); got != StatusHealthy {
-		t.Errorf("the healthy node is %v", got)
+	if finalFine != StatusHealthy {
+		t.Errorf("the healthy node is %v", finalFine)
 	}
-	if got := stateOf(wd, "stuck"); got != StatusUnhealthy {
-		t.Errorf("the stuck node is %v, want %v", got, StatusUnhealthy)
+	if finalStuck != StatusUnhealthy {
+		t.Errorf("the stuck node is %v, want %v", finalStuck, StatusUnhealthy)
 	}
 }
 
@@ -282,11 +287,9 @@ func TestFleet_ANodeThatDiesAndANodeThatLies(t *testing.T) {
 		{Name: "liar", HealthURL: liar.URL, DispatchNode: "cell-liar"},
 	}, reactor)
 	fleetWaitUntil(t, 8*time.Second, "both to be recovered", func() bool { return orchestrator.count("cell-gone") == 1 && orchestrator.count("cell-liar") == 1 })
+	// Read while the watchdog runs: stopping cancels a poll in flight, which reads as unreachable.
+	fleetWaitUntil(t, 5*time.Second, "the dead node to read unreachable and the lying one invalid", func() bool {
+		return stateOf(wd, "gone") == StatusUnreachable && stateOf(wd, "liar") == StatusInvalid
+	})
 	stop()
-	if got := stateOf(wd, "gone"); got != StatusUnreachable {
-		t.Errorf("the dead node is %v", got)
-	}
-	if got := stateOf(wd, "liar"); got != StatusInvalid {
-		t.Errorf("the lying node is %v", got)
-	}
 }
