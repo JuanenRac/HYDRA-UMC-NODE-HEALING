@@ -50,5 +50,6 @@ jobs:
             sort -k3 -n cover.txt | head -40
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+          grep -v '100.0%' cover.txt
           echo "COVERAGE_TOTAL=${total}"
           awk -v t="$total" -v f="$COVERAGE_FLOOR" 'BEGIN { exit !(t+0 >= f+0) }' || { echo "::error::coverage ${total}% is under the floor ${COVERAGE_FLOOR}%"; exit 1; }
