@@ -1,0 +1,38 @@
+# =============================================================================
+# HYDRA-UMC-NODE-HEALING - Simulation bench
+# Copyright (C) 2026 JuanenRac (Electro Hobby 3D) <electrohobby3d@gmail.com>
+# GPL-3.0-or-later - see LICENSE
+#
+# Runs the real watchdog and the real recovery reactor against a simulated fleet (services that are steady, stuck, bouncing, dead or
+# lying) and a simulated orchestrator, and the MQTT clients against a scripted broker, with the race detector on. No node, robot,
+# broker or orchestrator is touched.
+# =============================================================================
+name: Simulation bench
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  simulation:
+    name: Simulated fleet and scripted broker
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: stable
+      - name: Run the fleet scenarios and the broker scenarios with the race detector
+        shell: bash
+        run: |
+          go test -race -count=1 -run 'TestFleet_|TestMQTT|TestOrchestratorReactor_|TestRetry|TestSnapshot' ./src/watchdog/
+          echo "SIMULATION_SCENARIOS=OK"
