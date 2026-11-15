@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The SDK pin and the shared tools are up to date:** the SDK dependency names the newest release tag, and the shared tools are the canonical copies again.
 - **The fleet simulation reads the final states while the watchdog still runs:** stopping the watchdog cancels a poll that is in flight, which reads as unreachable, so two simulation tests failed now and then on a slow runner; they now wait for the expected states before stopping.
 - **More tests for the MQTT clients, the redaction forms, the swarm refresh loop and the event target, a simulated fleet and a coverage floor:** 40 new tests send the hand-written MQTT packets and both clients through a scripted broker that refuses, hangs up, goes silent, answers with something else and sends what is not the reader's own; they cover the JSON and line forms of the redaction, the refresh loop of the swarm registry against a SWARM-SYNC that changes, fails and recovers, and the credential files of the event target. A `Simulation bench` workflow runs the real watchdog and reactor against simulated services (steady, stuck, bouncing, dead, lying) and a simulated orchestrator with the race detector on, and a `Coverage` workflow fails when the statement coverage falls under its floor.
 
