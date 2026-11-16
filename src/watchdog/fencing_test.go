@@ -135,6 +135,32 @@ func TestFencing_EveryDoubtIsARefusal(t *testing.T) {
 	}
 }
 
+// A cell that redirects to another host which says "stopped" is not a confirmation: the redirect is not followed.
+func TestFencing_ARedirectIsNotFollowedAndIsARefusal(t *testing.T) {
+	var asked atomic.Int32
+	elsewhere := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		asked.Add(1)
+		_, _ = w.Write([]byte(`{"state":"stopped"}`))
+	}))
+	defer elsewhere.Close()
+	for _, code := range []int{http.StatusMovedPermanently, http.StatusFound, http.StatusTemporaryRedirect, http.StatusPermanentRedirect} {
+		cell := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, elsewhere.URL+"/robots/n/state", code)
+		}))
+		c := confirmConfig(cell.URL)
+		c.HoldURL = ""
+		c.ConfirmTimeoutSeconds = 1
+		verdict := newFencer(t, c).Fence(context.Background(), Node{Name: "n"}, "cell-a", time.Hour)
+		cell.Close()
+		if verdict.Safe {
+			t.Fatalf("a %d redirect to a host that says stopped was taken as a confirmation: %s", code, verdict.Reason)
+		}
+	}
+	if asked.Load() != 0 {
+		t.Fatalf("the host behind the redirect was asked %d time(s)", asked.Load())
+	}
+}
+
 func TestFencing_AnUnreachableCellIsARefusal(t *testing.T) {
 	server := httptest.NewServer(http.NotFoundHandler())
 	base := server.URL

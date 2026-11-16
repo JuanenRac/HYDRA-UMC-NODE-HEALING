@@ -223,7 +223,8 @@ func (f *HTTPFencer) client() *http.Client {
 	if f.Client != nil {
 		return f.Client
 	}
-	return &http.Client{Timeout: 5 * time.Second}
+	// a redirect is not followed: the state that lets a robot be given to another one comes only from the host the operator wrote
+	return &http.Client{Timeout: 5 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 }
 
 func (f *HTTPFencer) wait(ctx context.Context, d time.Duration) bool {

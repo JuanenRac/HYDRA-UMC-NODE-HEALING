@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The fencing client does not follow redirects:** a cell that answered a state request with a 301, 302, 307 or 308 sent the client on to another host, and the state read there could confirm a stop. A redirect is now an answer that is not 200, so the robot is not confirmed. Test added with a second server that must not be asked.
 - **A host name that starts with `127.` is no longer taken for the local machine in the fencing configuration:** `http://127.cell.example.com/...` passed the plain-http rule and the fencing token would have travelled unencrypted to another machine. The host counts as local only when it is `localhost` or an address that parses as a loopback address (the whole 127.0.0.0/8 block and `::1`). Tests cover the names and the addresses.
 - **The SDK pin and the shared tools are up to date:** the SDK dependency names the newest release tag, and the shared tools are the canonical copies again.
 - **The fleet simulation reads the final states while the watchdog still runs:** stopping the watchdog cancels a poll that is in flight, which reads as unreachable, so two simulation tests failed now and then on a slow runner; they now wait for the expected states before stopping.
