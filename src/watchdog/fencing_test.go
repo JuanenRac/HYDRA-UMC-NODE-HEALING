@@ -135,6 +135,32 @@ func TestFencing_EveryDoubtIsARefusal(t *testing.T) {
 	}
 }
 
+// A cell that redirects to another host which says "stopped" is not a confirmation: the redirect is not followed.
+func TestFencing_ARedirectIsNotFollowedAndIsARefusal(t *testing.T) {
+	var asked atomic.Int32
+	elsewhere := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		asked.Add(1)
+		_, _ = w.Write([]byte(`{"state":"stopped"}`))
+	}))
+	defer elsewhere.Close()
+	for _, code := range []int{http.StatusMovedPermanently, http.StatusFound, http.StatusTemporaryRedirect, http.StatusPermanentRedirect} {
+		cell := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, elsewhere.URL+"/robots/n/state", code)
+		}))
+		c := confirmConfig(cell.URL)
+		c.HoldURL = ""
+		c.ConfirmTimeoutSeconds = 1
+		verdict := newFencer(t, c).Fence(context.Background(), Node{Name: "n"}, "cell-a", time.Hour)
+		cell.Close()
+		if verdict.Safe {
+			t.Fatalf("a %d redirect to a host that says stopped was taken as a confirmation: %s", code, verdict.Reason)
+		}
+	}
+	if asked.Load() != 0 {
+		t.Fatalf("the host behind the redirect was asked %d time(s)", asked.Load())
+	}
+}
+
 func TestFencing_AnUnreachableCellIsARefusal(t *testing.T) {
 	server := httptest.NewServer(http.NotFoundHandler())
 	base := server.URL
@@ -218,6 +244,9 @@ func TestFencingConfig_Validation(t *testing.T) {
 		"unknown mode":                 {Enabled: true, Mode: "trust", StatusURL: "http://127.0.0.1/x"},
 		"lease without a ttl":          {Enabled: true, Mode: "lease"},
 		"plain http to a remote cell":  {Enabled: true, StatusURL: "http://cell.example/robots/{node}/state"},
+		"name that starts with 127.":   {Enabled: true, StatusURL: "http://127.cell.example.com/x"},
+		"name that starts with 127. 2": {Enabled: true, StatusURL: "http://127.0.0.1.example.com/x"},
+		"not an address":               {Enabled: true, StatusURL: "http://127.0.0/x"},
 		"not a url":                    {Enabled: true, StatusURL: "ftp://127.0.0.1/x"},
 		"node in the host":             {Enabled: true, StatusURL: "http://{node}.local/state", AllowPlaintext: true},
 		"timeout too long":             {Enabled: true, StatusURL: "http://127.0.0.1/x", ConfirmTimeoutSeconds: 999},
@@ -229,7 +258,8 @@ func TestFencingConfig_Validation(t *testing.T) {
 			t.Errorf("%s must be refused", name)
 		}
 	}
-	good := []FencingConfig{{}, {Enabled: true, StatusURL: "http://127.0.0.1:8080/x/{node}"}, {Enabled: true, StatusURL: "https://cell.example/x", HoldURL: "https://cell.example/h"},
+	good := []FencingConfig{{}, {Enabled: true, StatusURL: "http://127.0.0.1:8080/x/{node}"}, {Enabled: true, StatusURL: "http://127.1.2.3/x"}, {Enabled: true, StatusURL: "http://[::1]:8080/x"},
+		{Enabled: true, StatusURL: "http://localhost:8080/x"}, {Enabled: true, StatusURL: "https://cell.example/x", HoldURL: "https://cell.example/h"},
 		{Enabled: true, Mode: "lease", LeaseTtlSeconds: 5}, {Enabled: true, StatusURL: "http://cell.example/x", AllowPlaintext: true}}
 	for i, c := range good {
 		if err := c.Validate(); err != nil {

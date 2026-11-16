@@ -29,6 +29,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -80,7 +81,12 @@ var defaultSafeStates = []string{"stopped", "held", "isolated"}
 
 func loopbackURLHost(host string) bool {
 	host = strings.Trim(host, "[]")
-	return strings.EqualFold(host, "localhost") || host == "::1" || strings.HasPrefix(host, "127.")
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	// an address is loopback when it parses as one: a name that merely starts with "127." (127.cell.example.com) is another machine
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 func checkTemplate(name, template string, allowPlaintext bool) error {
@@ -217,7 +223,8 @@ func (f *HTTPFencer) client() *http.Client {
 	if f.Client != nil {
 		return f.Client
 	}
-	return &http.Client{Timeout: 5 * time.Second}
+	// a redirect is not followed: the state that lets a robot be given to another one comes only from the host the operator wrote
+	return &http.Client{Timeout: 5 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 }
 
 func (f *HTTPFencer) wait(ctx context.Context, d time.Duration) bool {
