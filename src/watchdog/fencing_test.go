@@ -218,6 +218,9 @@ func TestFencingConfig_Validation(t *testing.T) {
 		"unknown mode":                 {Enabled: true, Mode: "trust", StatusURL: "http://127.0.0.1/x"},
 		"lease without a ttl":          {Enabled: true, Mode: "lease"},
 		"plain http to a remote cell":  {Enabled: true, StatusURL: "http://cell.example/robots/{node}/state"},
+		"name that starts with 127.":   {Enabled: true, StatusURL: "http://127.cell.example.com/x"},
+		"name that starts with 127. 2": {Enabled: true, StatusURL: "http://127.0.0.1.example.com/x"},
+		"not an address":               {Enabled: true, StatusURL: "http://127.0.0/x"},
 		"not a url":                    {Enabled: true, StatusURL: "ftp://127.0.0.1/x"},
 		"node in the host":             {Enabled: true, StatusURL: "http://{node}.local/state", AllowPlaintext: true},
 		"timeout too long":             {Enabled: true, StatusURL: "http://127.0.0.1/x", ConfirmTimeoutSeconds: 999},
@@ -229,7 +232,8 @@ func TestFencingConfig_Validation(t *testing.T) {
 			t.Errorf("%s must be refused", name)
 		}
 	}
-	good := []FencingConfig{{}, {Enabled: true, StatusURL: "http://127.0.0.1:8080/x/{node}"}, {Enabled: true, StatusURL: "https://cell.example/x", HoldURL: "https://cell.example/h"},
+	good := []FencingConfig{{}, {Enabled: true, StatusURL: "http://127.0.0.1:8080/x/{node}"}, {Enabled: true, StatusURL: "http://127.1.2.3/x"}, {Enabled: true, StatusURL: "http://[::1]:8080/x"},
+		{Enabled: true, StatusURL: "http://localhost:8080/x"}, {Enabled: true, StatusURL: "https://cell.example/x", HoldURL: "https://cell.example/h"},
 		{Enabled: true, Mode: "lease", LeaseTtlSeconds: 5}, {Enabled: true, StatusURL: "http://cell.example/x", AllowPlaintext: true}}
 	for i, c := range good {
 		if err := c.Validate(); err != nil {
