@@ -4,11 +4,15 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.2.6]
+
 - **The fencing client does not follow redirects:** a cell that answered a state request with a 301, 302, 307 or 308 sent the client on to another host, and the state read there could confirm a stop. A redirect is now an answer that is not 200, so the robot is not confirmed. Test added with a second server that must not be asked.
 - **A host name that starts with `127.` is no longer taken for the local machine in the fencing configuration:** `http://127.cell.example.com/...` passed the plain-http rule and the fencing token would have travelled unencrypted to another machine. The host counts as local only when it is `localhost` or an address that parses as a loopback address (the whole 127.0.0.0/8 block and `::1`). Tests cover the names and the addresses.
 - **The SDK pin and the shared tools are up to date:** the SDK dependency names the newest release tag, and the shared tools are the canonical copies again.
 - **The fleet simulation reads the final states while the watchdog still runs:** stopping the watchdog cancels a poll that is in flight, which reads as unreachable, so two simulation tests failed now and then on a slow runner; they now wait for the expected states before stopping.
 - **More tests for the MQTT clients, the redaction forms, the swarm refresh loop and the event target, a simulated fleet and a coverage floor:** 40 new tests send the hand-written MQTT packets and both clients through a scripted broker that refuses, hangs up, goes silent, answers with something else and sends what is not the reader's own; they cover the JSON and line forms of the redaction, the refresh loop of the swarm registry against a SWARM-SYNC that changes, fails and recovers, and the credential files of the event target. A `Simulation bench` workflow runs the real watchdog and reactor against simulated services (steady, stuck, bouncing, dead, lying) and a simulated orchestrator with the race detector on, and a `Coverage` workflow fails when the statement coverage falls under its floor.
+
+- Build version synchronized with `hydra-umc.project.json` and the repository-native version source.
 
 ## [0.2.5] - **README: the platform statement:** a note says that where the README speaks of the CM5 it means the pilot bench that runs today, and that the target platform of HYDRA-UMC, an NVIDIA Jetson Orin NX 16 GB, is a design that has not been built or tested.
 - A versioned snapshot of the health of each node, in a chain of hashes (--snapshot-file, off by default): every change of state writes one healing-snapshot/1 document (identity, growing sequence, component versions, hash of the... (and 2 more changes)
