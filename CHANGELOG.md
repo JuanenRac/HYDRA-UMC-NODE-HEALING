@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **Token and secret files saved with a byte order mark are read:** a file written by an editor of Windows as "UTF-8 with BOM" kept the mark in front of the fencing token or the shared secret of the swarm, so the other side refused it. The mark is dropped now; a UTF-16 file is refused. Test added.
+
 ## [0.2.6]
 
 - **The fencing client does not follow redirects:** a cell that answered a state request with a 301, 302, 307 or 308 sent the client on to another host, and the state read there could confirm a stop. A redirect is now an answer that is not 200, so the robot is not confirmed. Test added with a second server that must not be asked.

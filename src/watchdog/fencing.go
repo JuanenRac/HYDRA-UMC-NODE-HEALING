@@ -211,7 +211,11 @@ func NewHTTPFencer(c FencingConfig) (*HTTPFencer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("fencing config: cannot read the token file: %w", err)
 		}
-		f.token = strings.TrimSpace(string(raw))
+		// a byte order mark (an editor of Windows) is not part of the token; UTF-16 shows as NULs and is refused
+		f.token = strings.TrimSpace(strings.TrimPrefix(string(raw), "\ufeff"))
+		if strings.ContainsRune(f.token, 0) {
+			return nil, fmt.Errorf("fencing config: the token file is not UTF-8 text")
+		}
 		if len(f.token) < 16 {
 			return nil, fmt.Errorf("fencing config: the token file holds fewer than 16 characters")
 		}

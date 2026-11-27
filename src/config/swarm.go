@@ -125,7 +125,11 @@ func readSecret(path string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot read a secret file: %w", err)
 	}
-	secret := []byte(strings.TrimSpace(string(raw)))
+	// a byte order mark (an editor of Windows) is not part of the secret; UTF-16 shows as NULs and is refused
+	secret := []byte(strings.TrimSpace(strings.TrimPrefix(string(raw), "\ufeff")))
+	if strings.ContainsRune(string(secret), 0) {
+		return nil, fmt.Errorf("a secret file is not UTF-8 text")
+	}
 	if len(secret) < 16 {
 		return nil, fmt.Errorf("a secret file holds fewer than 16 characters")
 	}
