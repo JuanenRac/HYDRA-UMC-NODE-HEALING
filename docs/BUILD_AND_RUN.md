@@ -37,3 +37,9 @@ kill -HUP <pid>                                         # read the registry agai
 `..._checks_total`, `..._transitions_total` and `hydra_node_healing_recovery_requests_total`. A gRPC node is polled
 over one connection kept between polls; a connection that fails is dropped and dialed again.
 
+
+## Keeping the recovery budget across a restart
+
+With `-journal PATH` every allowed recovery request is a `recovery` line of the journal. Adding `-journal-restore-budget` (off by default)
+reads the lines still inside the cooldown or the 10 minute window at start, so the limits continue where they were. Without a journal the
+limits live in memory only.
