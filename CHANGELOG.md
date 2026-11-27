@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The recovery cooldown and budget can survive a restart:** with `-journal`, every allowed recovery request is written as a `recovery` line, and `-journal-restore-budget` (off by default) reads the recent ones back at start, so a watchdog restarted in a loop does not start each time with a full budget. Tests added.
 - **Token and secret files saved with a byte order mark are read:** a file written by an editor of Windows as "UTF-8 with BOM" kept the mark in front of the fencing token or the shared secret of the swarm, so the other side refused it. The mark is dropped now; a UTF-16 file is refused. Test added.
 
 ## [0.2.6]

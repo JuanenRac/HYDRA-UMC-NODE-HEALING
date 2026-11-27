@@ -26,9 +26,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
 	"sync"
-	"os/signal"
 	"syscall"
 	"time"
 
@@ -56,6 +56,7 @@ func main() {
 	journalPath := flag.String("journal", "", "append-only JSONL journal of every transition and recovery request, chained by SHA-256 and rotated by size; empty keeps no journal")
 	journalMaxBytes := flag.Int64("journal-max-bytes", watchdog.DefaultJournalMaxBytes, "size at which the journal is rotated")
 	journalBackups := flag.Int("journal-backups", watchdog.DefaultJournalBackups, "how many rotated journal files are kept")
+	journalRestore := flag.Bool("journal-restore-budget", false, "at start, read the recent recovery requests of -journal back into the cooldown and the budget, so a restart does not start with a full budget; needs -journal, off by default")
 	journalVerify := flag.Bool("journal-verify", false, "check the hash chain of the file given with -journal and exit")
 	listen := flag.String("listen", "", "address (host:port) for the read-only status endpoint: GET /health (liveness) and GET /metrics (Prometheus); empty serves nothing. A non-loopback address needs -status-token")
 	statusToken := flag.String("status-token", "", "bearer token demanded on /metrics (prefer the STATUS_TOKEN environment variable: a flag value is visible in the process list)")
@@ -271,6 +272,22 @@ func main() {
 			fmt.Printf("[node-healing] lease %s as %s: a recovery is requested only while this watchdog holds it\n", lease.Name(), holder)
 		}
 		orchestratorReactor.Fencer = fencer
+		if journal != nil {
+			orchestratorReactor.Record = journal.Record
+		}
+		if *journalRestore {
+			if journal == nil {
+				fmt.Fprintln(os.Stderr, "[node-healing] fatal: -journal-restore-budget needs -journal PATH")
+				os.Exit(1)
+			}
+			past, restoreErr := journal.RecentRecoveries(time.Now(), policy.RestoreWindow())
+			if restoreErr != nil {
+				fmt.Fprintf(os.Stderr, "[node-healing] fatal: -journal-restore-budget: %v\n", restoreErr)
+				os.Exit(1)
+			}
+			orchestratorReactor.Restore(past)
+			fmt.Printf("[node-healing] %d recent recovery request(s) read back from the journal into the cooldown and the budget\n", len(past))
+		}
 		reactor = orchestratorReactor
 		fmt.Printf("[node-healing] recovery requests will be sent to orchestrator at %s only for registry entries with a \"dispatchNode\", after %s down, %s after start-up, at most %d per 10 minutes and one per node every %s\n",
 			*orchestratorURL, policy.ConfirmAfter, policy.StartupGrace, policy.BudgetMax, policy.Cooldown)

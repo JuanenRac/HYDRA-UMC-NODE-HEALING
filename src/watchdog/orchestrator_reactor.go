@@ -120,6 +120,8 @@ type OrchestratorReactor struct {
 	Token string
 	// Printf defaults to fmt.Printf, same as LogReactor's own default.
 	Printf func(format string, args ...any)
+	// Record, when set, is the journal: every allowed request is written as a RecoveryEvent line, so Restore can read it back.
+	Record func(event string, fields map[string]any) error
 	// RecoveryRetryPolicy bounds the background retry below - defaults to
 	// DefaultRecoveryRetryPolicy() when left zero-valued.
 	RecoveryRetryPolicy RetryPolicy
@@ -301,6 +303,12 @@ func (r *OrchestratorReactor) allowRecovery(nodeName string) bool {
 		r.lastByNode = make(map[string]time.Time)
 	}
 	r.lastByNode[nodeName] = now
+	if r.Record != nil {
+		// a journal that cannot be written never stops a recovery
+		if err := r.Record(RecoveryEvent, map[string]any{"node": nodeName}); err != nil {
+			r.printf("[node-healing] the recovery request for %s could not be journalled: %v\n", nodeName, err)
+		}
+	}
 	return true
 }
 
